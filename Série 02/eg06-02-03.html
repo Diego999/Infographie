@@ -200,6 +200,7 @@
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
 				
 				//sets Bezier control points
+				var numberBezPoints = 0;
 				if (points.length == 12){
 					var p0 = [];
 					var p1 = [];
@@ -214,8 +215,9 @@
 					glContext.uniform2fv(prg.p0Uniform, p0);	    
 					glContext.uniform2fv(prg.p1Uniform, p1);	    
 					glContext.uniform2fv(prg.p2Uniform, p2);
-					glContext.uniform2fv(prg.p3Uniform, p3);	
-				
+					glContext.uniform2fv(prg.p3Uniform, p3);
+					
+					numberBezPoints = indices.length;
 				}
 				
 				//1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
@@ -232,7 +234,7 @@
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 								
 				//1.4 Draw as line strip to approximate the bezier curve
-				glContext.drawElements(glContext.LINE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
+				glContext.drawElements(glContext.LINE_STRIP, numberBezPoints, glContext.UNSIGNED_SHORT,0);
 				
 				//2. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
 				//   then ask Vertex Shader to draw lines between vertices(1.4)
