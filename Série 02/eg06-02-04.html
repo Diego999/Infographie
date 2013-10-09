@@ -40,6 +40,11 @@
 					//vertex position is calculated according to the quadratic Bezier formula
 					float t = aVertexPosition.x;
 					
+					/*
+					The main trick is to know the real size of the array. For this, we use a fake value to know
+					where to stop. This a maybe not an optimal solution, but it works.
+					*/
+					
 					//Breakpoint with fake value
 					for(int i = 0; i < SIZE_MAX; ++i)
 						if(uP[i].x < 5.0)
@@ -50,14 +55,26 @@
 							break;
 						}
 
+					/*
+					The first approach was to use the binomial formula to compute Bézier. The problem
+					was the with the factorial of n grows very fast. So, a possible solution is to compute
+					recursively the intermediate points
+					*/
 					for(int i = 0; i < SIZE_MAX; ++i)
 					{
-						if(uI[i].x > 5.0)
+						/*
+						2 Points -> 1 intermediate Points - 1, -> 0, so 1*1 compute loop
+						3 Points -> 2 intermediate Points - 1, -> 1, so 2*2 compute loops
+						n Points -> n-1 intermediate Points -> O(n^2), for all n>= 2
+						*/
+						if(i > (nbIntermediatePoint-1))
 							break;
 							
+						/*In the given starter program, there was a problem with the color for more than 4 points. A possible solution
+						is to compute the value of the color directly in the shader. So we remove all color relations in the JS part*/
 						vColor = vec4(0.0, float(i)/float(nbIntermediatePoint), 0.0, 1.0);
 							
-						for(int j = 0; j< SIZE_MAX; ++j)
+						for(int j = 0; j < SIZE_MAX; ++j)
 							if(uI[j+1].x < 5.0)
 							{
 								vec2 vec = uI[j+1] - uI[j];
@@ -90,8 +107,8 @@
 		</script>
 
 		<script>		
-			var NUMBER_MAX_POINTS = 20;
-			var maxPoints = 3; //resolution of the Bezier curve, more points give a smoother curve
+			var NUMBER_MAX_POINTS = 20; //Maximum points we can draw
+			var maxPoints = 10; //resolution of the Bezier curve, more points give a smoother curve
 			window.onkeydown = checkKey;
 
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
@@ -227,7 +244,7 @@
 					for(; i < points.length; i += 3)
 						p.push(points[i], points[i+1]);
 					
-					glContext.uniform1i(glContext.getUniformLocation(prg, 'nbIntermediatePoint'), i/3-1);
+					glContext.uniform1i(glContext.getUniformLocation(prg, 'nbIntermediatePoint'), i/3-1);//To compute the color
 					
 					if(i/3 < NUMBER_MAX_POINTS)
 						p.push(10.0, 10.0);//Fake value
