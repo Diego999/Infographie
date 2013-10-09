@@ -13,27 +13,24 @@
 		<!-- *** Vertex Shader ***
 		  -- Applies projection and model-view transformations to each vertex -->
 		<script id="shader-vs" type="x-shader/x-vertex">
-			#version 100
 			//vertices are positioned according to the Bezier formula
 			attribute vec3 aVertexPosition;
-			attribute vec4 aColor;
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
 			varying vec4 vColor;
 			
 			//points defined by the user (mouse clicks) are the 4 control points of the cubic Bezier
-			uniform vec2 uP[100]; //Max 100 points
-			uniform int uFact[100];
+			const int SIZE_MAX = 20;
+			uniform vec2 uP[SIZE_MAX]; //Max 20 points
+			uniform int nbIntermediatePoint;
 			
-			int binomial(const int n, const int k)
-			{
-				return uFact[n]/(uFact[k]*uFact[n-k]);
-			}
+			vec2 uI[SIZE_MAX]; //Intermediate
 			
 			void main(void) {
 				//sets the size of the 3 control point primitive 'uP0', 'uP1', and 'uP2'
 				gl_PointSize = 5.0;
-				vColor = aColor; 
+				
+				vColor = vec4(1.0, 1.0, 1.0, 1.0);
 				
 				//if the vertex z coordinate is not 0, then its a point and will be rendered with the red color
 				if (aVertexPosition.z != 0.0){
@@ -43,12 +40,39 @@
 					//vertex position is calculated according to the quadratic Bezier formula
 					float t = aVertexPosition.x;
 					
-					vec2 B_t = vec2(0.0,0.0);//(1.0 - t) * (1.0 - t) * (1.0 - t) * uP[0] + 3.0 * (1.0 - t) * (1.0 - t) * t* uP[1] + 3.0 * (1.0 - t) * (1.0 -t) * t * t * uP[2] + t * t * t * uP[3];//Cubic curve
+					//Breakpoint with fake value
+					for(int i = 0; i < SIZE_MAX; ++i)
+						if(int(uP[i].x) < 5)
+							uI[i] = uP[i];
+						else
+						{
+							uI[i] = vec2(10.0, 10.0);//Fake value
+							break;
+						}
 					
-					for(int i = 0; uP[i].x <= 10.0; ++i)
-						B_t += (float(binomial(2, i)))*pow(1.0-t, float(i))*pow(t, float(i))*uP[i];
 					
-					vec3 newVertexPos = vec3(B_t, 0.0);
+					for(int i = 0; i < SIZE_MAX; ++i)
+					{
+						vColor = vec4(0.0, float(i)/float(nbIntermediatePoint), 0.0, 1.0);
+
+						for(int j = 0; j < SIZE_MAX; ++j)
+						{
+							if(uI[j+1].x < 5.0)
+							{
+								vec2 vec = uI[j+1] - uI[j];
+								uI[j] += t*vec;
+							}
+							else
+							{
+								uI[j] = vec2(10.0, 10.0);//Fake value
+								break;
+							}
+						}
+						if(uI[1].x < 5.0)
+							break;
+					}
+
+					vec3 newVertexPos = vec3(uI[0], 0.0);
 					gl_Position = uPMatrix * uMVMatrix * vec4(newVertexPos, 1.0);
 				}
 			}
@@ -67,18 +91,9 @@
 			}
 		</script>
 
-		<script>
-			
-			function factorial(n)
-			{
-				if(n == 0)
-					return 1;
-				else 
-					return n*factorial(n-1);
-			}
-			
-			var NUMBER_MAX_POINTS = 100;
-			var maxPoints = 3; //resolution of the Bezier curve, more points give a smoother curve
+		<script>		
+			var NUMBER_MAX_POINTS = 20;
+			var maxPoints = 6; //resolution of the Bezier curve, more points give a smoother curve
 			window.onkeydown = checkKey;
 
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
@@ -110,7 +125,7 @@
 					}
 					case 49: // '+' key (from keyboard)
 					case 107:{ // '+' key (from number pad)
-						if (maxPoints <20) ++maxPoints;
+						if (maxPoints <20)
 						maxPoints ++;
 						initBuffers();
 						break;
@@ -151,8 +166,8 @@
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
 				
-				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
-				glContext.enableVertexAttribArray(prg.colorAttribute);
+				//prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
+				//glContext.enableVertexAttribArray(prg.colorAttribute);
 				
 				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
@@ -168,16 +183,15 @@
 				vertices = [];				
 				colors = [];
 				
-				for (i = 0.0; i <= maxPoints; i++){
+				for (i = 0; i <= maxPoints; ++i){
 					vertices.push(1.0/maxPoints * i, 0, 0);
 					indices.push(i);
-					colors.push(0.0, i/maxPoints, 0.0, 1.0); // dark to light green
 				}
 
 				vertexBuffer = getVertexBufferWithVertices(vertices);					
 				indexBuffer = getIndexBufferWithIndices(indices);
 				pointsIndexBuffer = getIndexBufferWithIndices(pointsIndices);
-				colorBuffer = getVertexBufferWithVertices(colors);
+				//colorBuffer = getVertexBufferWithVertices(colors);
 				pointsBuffer = getVertexBufferWithVertices(points);
 			}
 
@@ -215,29 +229,22 @@
 				if (points.length >= 2*3){
 					var p = [];
 					var index = 0;
+					
 					for(var i = 0; i < points.length; i += 3, ++index)
 						p.push(points[i], points[i+1]);
-					for(;index < NUMBER_MAX_POINTS; ++index)
-						p.push(10.0, 10.0);
-					glContext.uniform2fv(glContext.getUniformLocation(prg, 'uP'), p);   
+					
+					for(; index < NUMBER_MAX_POINTS; ++index)
+						p.push(10.0, 10.0);//Fake value
+					 
+					glContext.uniform1i(glContext.getUniformLocation(prg, 'nbIntermediatePoint'), 5);
+					glContext.uniform2fv(glContext.getUniformLocation(prg, 'uP'), p);
 				}
-				
-				var value = [];
-				for(var i = 0; i < NUMBER_MAX_POINTS; ++i)
-					value.push(factorial(i));
-
-				glContext.uniform1i(glContext.getUniformLocation(prg, 'uFact'), value);  
-				
 			
 				//1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
 				//   then ask Vertex Shader to draw lines between vertices(1.4)
 				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.2 Send the array of COLOR specifying that they are each composed of 4 parameters
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
-				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
 
 				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -295,7 +302,7 @@ les mouvements horizontaux du point de contrôle central et similairement ‘w’ et 
 
 	function addPointOnGLScene(pX,pY){
 
-		if (points.length >= NUMBER_MAX_POINTS){
+		if (points.length >= 3*NUMBER_MAX_POINTS){
 			//resets points and related arrays
 			points = [];
 			pointsIndices = [];
@@ -306,7 +313,7 @@ les mouvements horizontaux du point de contrôle central et similairement ‘w’ et 
 		
 		//adds a new, consecutive index 
 		pointsIndices.push(pointsIndices.length);
-				
+
 		//re-initializes the buffers to take the new vertex into account when rendering the scene
 		initBuffers();	
 	}
