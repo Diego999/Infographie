@@ -13,6 +13,9 @@
 		<!-- *** Vertex Shader ***
 		  -- Applies projection and model-view transformations to each vertex -->
 		<script id="shader-vs" type="x-shader/x-vertex">
+			/*
+			General idea : Change the 3*3 values (3 points) to 3*4
+			*/
 			//vertices are positioned according to the Bezier formula
 			attribute vec3 aVertexPosition;
 			attribute vec4 aColor;
@@ -199,7 +202,7 @@
 				
 				//sets Bezier control points
 				var numberBezPoints = 0;
-				if (points.length == 12){
+				if (points.length == 12){//Change 3*3 to 3*4 to add another point (totally useless)
 					var p0 = [];
 					var p1 = [];
 					var p2 = [];
@@ -284,7 +287,7 @@ les mouvements horizontaux du point de contrôle central et similairement ‘w’ et 
 
 	function addPointOnGLScene(pX,pY){
 
-		if (points.length >= 12){
+		if (points.length >= 12){//3*3 -> 3*4, same remark than before
 			//resets points and related arrays
 			points = [];
 			pointsIndices = [];

@@ -13,6 +13,10 @@
 		<!-- *** Vertex Shader ***
 		  -- Applies projection and model-view transformations to each vertex -->
 		<script id="shader-vs" type="x-shader/x-vertex">
+			/*
+			General idea : Change the formula of Bézier
+			*/
+		
 			//vertices are positioned according to the Bezier formula
 			attribute vec3 aVertexPosition;
 			attribute vec4 aColor;
