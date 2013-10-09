@@ -42,21 +42,22 @@
 					
 					//Breakpoint with fake value
 					for(int i = 0; i < SIZE_MAX; ++i)
-						if(int(uP[i].x) < 5)
+						if(uP[i].x < 5.0)
 							uI[i] = uP[i];
 						else
 						{
 							uI[i] = vec2(10.0, 10.0);//Fake value
 							break;
 						}
-					
-					
+
 					for(int i = 0; i < SIZE_MAX; ++i)
 					{
+						if(uI[i].x > 5.0)
+							break;
+							
 						vColor = vec4(0.0, float(i)/float(nbIntermediatePoint), 0.0, 1.0);
-
-						for(int j = 0; j < SIZE_MAX; ++j)
-						{
+							
+						for(int j = 0; j< SIZE_MAX; ++j)
 							if(uI[j+1].x < 5.0)
 							{
 								vec2 vec = uI[j+1] - uI[j];
@@ -67,9 +68,6 @@
 								uI[j] = vec2(10.0, 10.0);//Fake value
 								break;
 							}
-						}
-						if(uI[1].x < 5.0)
-							break;
 					}
 
 					vec3 newVertexPos = vec3(uI[0], 0.0);
@@ -93,14 +91,13 @@
 
 		<script>		
 			var NUMBER_MAX_POINTS = 20;
-			var maxPoints = 6; //resolution of the Bezier curve, more points give a smoother curve
+			var maxPoints = 3; //resolution of the Bezier curve, more points give a smoother curve
 			window.onkeydown = checkKey;
 
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
 			var indexBuffer = null;
 			var colorBuffer = null;
-
 
 			// point coordinates
 			var pointsBuffer = null;
@@ -118,7 +115,8 @@
 			function checkKey(ev){
 				switch(ev.keyCode){
 					case 173: // '-' key (from keyboard)
-					case 109:{ // '-' key (from number pad)
+					case 109: // '-' key (from number pad)
+					case 189:{ //Mac -
 						if (maxPoints >1) --maxPoints;
 						initBuffers();
 						break;
@@ -166,9 +164,6 @@
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
 				
-				//prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
-				//glContext.enableVertexAttribArray(prg.colorAttribute);
-				
 				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
 				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
 				
@@ -191,7 +186,6 @@
 				vertexBuffer = getVertexBufferWithVertices(vertices);					
 				indexBuffer = getIndexBufferWithIndices(indices);
 				pointsIndexBuffer = getIndexBufferWithIndices(pointsIndices);
-				//colorBuffer = getVertexBufferWithVertices(colors);
 				pointsBuffer = getVertexBufferWithVertices(points);
 			}
 
@@ -228,15 +222,16 @@
 				//sets Bezier control points
 				if (points.length >= 2*3){
 					var p = [];
-					var index = 0;
+					var i = 0;
 					
-					for(var i = 0; i < points.length; i += 3, ++index)
+					for(; i < points.length; i += 3)
 						p.push(points[i], points[i+1]);
 					
-					for(; index < NUMBER_MAX_POINTS; ++index)
+					glContext.uniform1i(glContext.getUniformLocation(prg, 'nbIntermediatePoint'), i/3-1);
+					
+					if(i/3 < NUMBER_MAX_POINTS)
 						p.push(10.0, 10.0);//Fake value
-					 
-					glContext.uniform1i(glContext.getUniformLocation(prg, 'nbIntermediatePoint'), 5);
+					
 					glContext.uniform2fv(glContext.getUniformLocation(prg, 'uP'), p);
 				}
 			
@@ -313,7 +308,6 @@ les mouvements horizontaux du point de contrôle central et similairement ‘w’ et 
 		
 		//adds a new, consecutive index 
 		pointsIndices.push(pointsIndices.length);
-
 		//re-initializes the buffers to take the new vertex into account when rendering the scene
 		initBuffers();	
 	}
