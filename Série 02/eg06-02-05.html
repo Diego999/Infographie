@@ -1,0 +1,171 @@
+<!doctype html>
+
+<html>
+	<head>
+		<!-- Definition of style sheet format, especially for the WebGL canevas: -->
+		<link rel="stylesheet" href="css/stylesheet.css">
+
+		<!-- External JavaScript (JS) sources: -->
+		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
+		<script src='js/gl-matrix-min.js'></script>		<!-- Matrix Library -->
+		<script src='js/webglTools.js'></script>		<!-- Basic WebGL initialization tools -->
+
+		<!-- *** Vertex Shader ***
+		  -- Applies projection and model-view transformations to each vertex -->
+		<script id="shader-vs" type="x-shader/x-vertex">
+			//vertices are positioned according to the Bezier formula
+			attribute vec3 aVertexPosition;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			varying vec4 vColor;
+						
+			void main(void) {
+				vColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+        gl_PointSize = 5.0;
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
+		</script>
+		
+		<!-- *** Fragment Shader ***
+		  -- Sets the pixel color using the "aColor" attribute -->
+		<script id="shader-fs" type="x-shader/x-fragment">
+			#ifdef GL_ES
+				precision highp float;
+			#endif
+
+			varying vec4 vColor;
+			void main(void) {
+				gl_FragColor = vColor;
+			}
+		</script>
+
+		<script>		
+			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
+			var vertexBuffer = null;
+			var indexBuffer = null;
+
+			var indices = []; //JavaScript array to store the indices of the curve
+			var vertices = []; //JavaScript array to store the vertices of the curve
+      
+			var mvMatrix = mat4.create(); // The Model-View matrix
+			var pMatrix = mat4.create(); // The projection matrix
+
+      //this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
+			function initShaderParameters(prg){
+				//The following lines get a reference to the uniforms and attributes defined in the shaders.
+				//This is a necessary step as the shaders are NOT written in JavaScript but in a 
+				//specialized language called GLSL.
+				
+				//--- Information for the Vertex Shader ---
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+				glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				
+				prg.pMatrixUniform          = glContext.getUniformLocation(prg, 'uPMatrix');
+				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
+				
+				//--- Information for the Fragment Shader ---
+				// <none>
+			}
+      
+			//initializes buffers: sends data from the javascript arrays to the graphics card
+			function initBuffers(){
+				// init or reset 'indices' and 'vertices' tables
+				indices = [];
+				vertices = [];				
+				colors = [];
+        
+        
+        var z = -0.75;
+        vertices.push( 0.00,  0.10, z);
+        vertices.push( 0.00,  0.00, z);
+        vertices.push( 0.05,  0.00, z);
+        
+        for(var i = 0; i < vertices.length/3; ++i){
+          indices.push(i);
+        }
+        
+        vertexBuffer = getVertexBufferWithVertices(vertices);					
+				indexBuffer = getIndexBufferWithIndices(indices);
+			}
+
+			/*
+			* Draws the scene
+			*/
+			function drawScene(){
+				//light grey background
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
+				
+				//activate z-buffer
+				glContext.enable(glContext.DEPTH_TEST);
+				
+				//resets color and depth buffer before drawing
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				//defines viewport dimensions based on the webgl canvas size
+				glContext.viewport(0, 0, c_width, c_height);
+						
+				//send transformation matrices to vertex shader
+				//perspective projection
+				mat4.perspective(60, c_width / c_height, 0.1, 10000.0, pMatrix);
+				
+				//orthographic projection : left, right, bottom, top, near, far, dest
+				//mat4.ortho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0, pMatrix);
+				
+				//this example does not apply model-view transformations
+				mat4.identity(mvMatrix);	
+
+				//send the projection and model view matrices to the vertex shader
+				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+        
+			
+				//1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
+				//   then ask Vertex Shader to draw lines between vertices(1.4)
+				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+
+				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        
+        //1.4 Draw as line strip to approximate the bezier curve
+				glContext.drawElements(glContext.POINTS, indices.length, glContext.UNSIGNED_SHORT,0);
+			}
+			
+			/*******************************************************************************
+				Starting point!! 
+				Initializes webgl, shaders, buffers and starts rendering loop
+			********************************************************************************/
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				//Initializes the program (shaders).
+				initProgram();
+				//Initializes the buffers that we are going to use to draw polygons (vertex buffer, color and index buffer)
+				initBuffers();
+				//Starts rendering loop, calls drawScene
+				renderLoop();
+			}
+		</script>
+
+	</head>
+
+	<!-- HTML body -->
+	<body onload="initWebGL()">
+		<script>displayTitle("Eg06-02 : WebGL, Courbes quadratiques de Bezier Ex5", 0,1,1,1);</script>
+		<p>	No user actions available.
+		</p>
+		<!-- WebGL canvas -->	
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+	</body>
+
+
+	<!-- Second script block, gets mouse clicks and transforms html space coordinates to webgl coordinates
+		This block is separated because it needs the webgl canvas to be created first. 
+	-->
+	<script id='code-js' type="text/javascript">
+	</script>
+
+</html>
