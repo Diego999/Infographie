@@ -70,10 +70,6 @@
 						if(i > (nbIntermediatePoint-1))
 							break;
 							
-						/*In the given starter program, there was a problem with the color for more than 4 points. A possible solution
-						is to compute the value of the color directly in the shader. So we remove all color relations in the JS part*/
-						vColor = vec4(0.0, float(i)/float(nbIntermediatePoint), 0.0, 1.0);
-							
 						for(int j = 0; j < SIZE_MAX; ++j)
 							if(uI[j+1].x < 5.0)
 							{
@@ -87,6 +83,10 @@
 							}
 					}
 
+					/*In the given starter program, there was a problem with the color for more than 4 points. A possible solution
+					is to compute the value of the color directly in the shader. So we remove all color relations in the JS part*/
+					vColor = vec4(0.0, t, 0.0, 1.0);
+						
 					vec3 newVertexPos = vec3(uI[0], 0.0);
 					gl_Position = uPMatrix * uMVMatrix * vec4(newVertexPos, 1.0);
 				}
