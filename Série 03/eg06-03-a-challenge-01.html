@@ -67,8 +67,12 @@
 			}
 			
 			function checkKey(ev){
-							var temp = mat4.create();
-				mat4.identity(temp);
+			
+				var supRotationMatrix  = mat4.create();
+				mat4.identity(supRotationMatrix );
+				
+				rotX = rotY = 0;
+				
 				switch(ev.keyCode){
 					case 173: // '-' key (from keyboard)
 					case 109:{ // '-' key (from number pad)
@@ -86,24 +90,22 @@
 					}
 					case 65:{ // 'a' key
 						rotY = -2.0;
-						mat4.rotate(temp, degToRad(rotY), [0, 1, 0]);
+						mat4.rotate(supRotationMatrix , degToRad(rotY), [0,1, 0]);
 						break;
 					}
 					case 68:{ // 'd' key
 						rotY = 2.0;
-						
-						mat4.rotate(temp, degToRad(rotY), [0, 1, 0]);
+						mat4.rotate(supRotationMatrix , degToRad(rotY), [0,1, 0]);
 						break;
 					}
 					case 87:{ // 'w' key
 						rotX = -2.0;
-						
-						mat4.rotate(temp, degToRad(rotX), [1, 0, 0]);
+						mat4.rotate(supRotationMatrix , degToRad(rotX), [1, 0, 0]);
 						break;
 					}
 					case 83:{ // 's' key
 						rotX = 2.0; 
-						mat4.rotate(temp, degToRad(rotX), [1, 0, 0]);
+						mat4.rotate(supRotationMatrix , degToRad(rotX), [1, 0, 0]);
 						break;
 					}
 					case 84:{ // 't' key
@@ -115,9 +117,8 @@
 					break;
 				}
 				
-
-
-				mat4.multiply(mvMatrix, temp, mvMatrix);
+				if(rotX != rotY)
+					mat4.multiply(supRotationMatrix , mvMatrix, mvMatrix);
 			}
 
 			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
@@ -193,7 +194,13 @@
 			            indices.push(first + 1);
 			        }
 			    }
-			    
+				
+				vertices.push(0);
+				vertices.push(0);
+				vertices.push(1);
+				indices.push(5);
+				colors.push(0.0,0.0,1.0,1.0);
+				
 			    console.log("indices: "+indices.length+" vertices: "+vertices.length);
 				vertexBuffer = getVertexBufferWithVertices(vertices);
 				indexBuffer = getIndexBufferWithIndices(indices);
@@ -219,7 +226,7 @@
 						
 				//orthographic projection : left, right, bottom, top, near, far, dest
 			    mat4.ortho(-1, 1, -1, 1 , -1, 1, pMatrix);
-
+				
 				//send the projection and model view matrices to the vertex shader
 			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);	
