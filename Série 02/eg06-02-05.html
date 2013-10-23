@@ -28,13 +28,29 @@
 			varying vec4 vColor;
 						
 			void main(void) {
+        /*
+        Based on the value in the aAction attribute, which is
+        associated to one vertex, we will execute different actions.
+        This allows to have different behaviour with the same vertex shader.
+        Maybe it would be possible to create a completly other vertex shader to do
+        something like this.
+        */
 				if(aAction>=1.0){
+          /*
+          Extracts the t for the current vertex and calculates
+          the position on the Bézier curve.
+          The color is picked from the aColor attribute associated to the vertex.
+          */
           vColor = aColor;
           float t = aVertexPosition.x;
           vec3 intermedPosition = (1.0-t) * ((1.0-t) * uP0 +  t * uP1) + t * ((1.0-t) * uP1 + t * uP2);
           gl_Position = uPMatrix * uMVMatrix * vec4(intermedPosition, 1.0);
         }
         else{
+          /*
+          Base behaviour to display the vertices as defined.
+          The color passed to the fragment shader is black.
+          */
           vColor = vec4(0.0,0.0,0.0,1.0);
           gl_PointSize = 5.0;
           gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
@@ -60,15 +76,23 @@
 			var vertexBuffer = null;
 			var indexBuffer = null;
 			var colorBuffer = null;
+      /*
+      Extra buffer which contains for passing the actions to the vertex shader.
+      */
       var vertexActionBuffer = null;
 
 			var indices = []; //JavaScript array to store the indices of the curve
 			var vertices = []; //JavaScript array to store the vertices of the curve
       var colors = []; //JavaScript array to store the color assigned to each vertex
-      var vertexAction = []; //JavaScript array to store the action to execute in the vertex.
+      /*
+      Extra JavaScript array to store the action to execute in the vertex.
+      */
+      var vertexAction = [];
       
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix = mat4.create(); // The projection matrix
+      
+      var referencePoints = []
       
       //this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
 			function initShaderParameters(prg){
@@ -83,6 +107,9 @@
 				prg.colorAttribute 			= glContext.getAttribLocation(prg, "aColor");
         glContext.enableVertexAttribArray(prg.colorAttribute);
         
+        /*
+        Extra attribute association for the action buffers.
+        */
         prg.actionAttribute = glContext.getAttribLocation(prg, "aAction");
         glContext.enableVertexAttribArray(prg.actionAttribute);
  
@@ -106,6 +133,9 @@
         
         referencePoints=[];
         
+        /*
+        Set the 9 vectors which are necessary for the construction of the 6 bezier curves.
+        */
         referencePoints.push( 0.18,  0.38, -0.75);
         referencePoints.push( 0.45,  0.00, -0.80);
         referencePoints.push( 0.23, -0.39, -0.90);
@@ -119,6 +149,9 @@
         referencePoints.push( -0.12, -0.20, -0.60);
 			}
       
+      /*
+      Method initializes the buffers to display all the points of the referencePoints array.
+      */
       function setBuffersForPoints()
       {
       	indices = [];
@@ -127,8 +160,6 @@
         vertexAction = [];
         
         vertices = referencePoints;
-        
-        
         
         for(var i = 0; i < vertices.length/3; ++i){
           vertexAction.push(0.0);
@@ -142,6 +173,11 @@
         vertexActionBuffer = getVertexBufferWithVertices(vertexAction);
       }
       
+      /*
+      Initializes the buffers to draw the line for one beziers courbe.
+      The colors will be affected by the scheme: color(t*r, t*g, t*b, 1.0)
+      For example setBuffersForLine(0.0,1.0,0.0) draws a bezier line with the colors from green to black.
+      */
       function setBuffersForLine(r,g,b)
       {
         indices = [];
@@ -202,6 +238,10 @@
         setBuffersForPoints();
         drawVertexSet(glContext.POINTS);
         
+        /*
+        Draw the three Bézier lines.
+        Takes the points of the referencePoints matrix line by line.
+        */
         for(i = 0; i < 3; i++)
         {
           var offset = i * 9;
@@ -209,11 +249,16 @@
           glContext.uniform3fv(prg.p0Uniform, referencePoints.slice(offset + 0, offset + 3));
           glContext.uniform3fv(prg.p1Uniform, referencePoints.slice(offset + 3, offset + 6));
           glContext.uniform3fv(prg.p2Uniform, referencePoints.slice(offset + 6, offset + 9));
-  
+          
+          // Draw line with the gradient color from green to black
           setBuffersForLine(0.0,1.0,0.0);
           drawVertexSet(glContext.LINE_STRIP)
         }
         
+        /*
+        Draw the three Bézier lines.
+        Takes the points of the referencePoints matrix column by column.
+        */
         for(i = 0; i < 3; i++)
         {
           var offset = i * 3;
@@ -222,6 +267,7 @@
           glContext.uniform3fv(prg.p1Uniform, referencePoints.slice(offset + 9, offset + 12));
           glContext.uniform3fv(prg.p2Uniform, referencePoints.slice(offset + 18, offset + 21));
   
+          // Draw line with the gradient color from red to black
           setBuffersForLine(1.0,0.0,0.0);
           drawVertexSet(glContext.LINE_STRIP)
         }
@@ -229,7 +275,7 @@
 			}
       
       function drawVertexSet(style){
-        				//1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
+        //1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
 				//   then ask Vertex Shader to draw lines between vertices(1.4)
 				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
