@@ -67,7 +67,15 @@
 			}
 			
 			function checkKey(ev){
-			
+				/*
+				The problem was a purely linear algebra problem. 
+				Each transformation was applied to the local coordinated system of the sphere.  So when you wanted spin the sphere around the X axis, the X axis was those to the sphere and not the window.
+				So the solution was to apply these transformations to the global coordinated system and with this,
+				a rotation in the X axis will always rotate with the X axis of the window and not the one of the sphere. 
+				For the Y axis, it's the same procedure.
+				
+				When the user wants a rotation, we create the rotation matrix and we apply it to the old model-view matrix by a matrix multiplication
+				*/
 				var supRotationMatrix  = mat4.create();
 				mat4.identity(supRotationMatrix );
 				
