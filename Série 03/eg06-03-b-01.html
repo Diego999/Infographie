@@ -86,7 +86,9 @@
 					}
 					case 49: // '+' key (from keyboard)
 					case 107:{ // '+' key (from number pad)
-						if (sphereDivisions < 7) ++sphereDivisions;
+						//No Limit for sphereDivision
+						//if (sphereDivisions < 7) 
+						++sphereDivisions;
 						initBuffers();
 						break;
 					}
@@ -303,6 +305,8 @@
 					
 				vertexBuffer = getVertexBufferWithVertices(vertices);					
 				indexBuffer = getIndexBufferWithIndices(indices);
+				console.log("Indexes : "+ indices.length);
+				console.log("Vertex : "+ vertices.length);
 				colorBuffer = getVertexBufferWithVertices(colors);
 			}
 
@@ -378,6 +382,14 @@
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
+		<h1>Dessin à partir de 6 subdivisions</h1>
+		<p>A partir de 6 subdivision (7ème étape) l'affichage est bugué.<br />
+			Ceci est dû au fait que les buffers des index du vertex sont limités à 16 bits dans WebGL.<br />
+			Donc un seul buffer ne peut contenir que 65535 vertex.<br /><br />
+			
+			<a href="http://stackoverflow.com/questions/4998278/is-there-a-limit-of-vertices-in-webgl">Source</a>
+		
+		</p>
 	</body>
 
 
