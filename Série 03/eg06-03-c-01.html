@@ -167,7 +167,7 @@
 			}
 
 			//Function to draw a sphere 
-			function drawSphere(x, y , w, h,z)
+			function drawSphere(x, y , w, h)
 			{
 				//Setting the viewPort (White area on screen where drawing is done)
 				glContext.viewport(x-w/2, y-h/2, w, h);
@@ -219,9 +219,9 @@
 				glContext.viewport(0, 0, c_width, c_height);
 				
 				//Drawing 3 spheres on different positions
-				drawSphere(125,125,rSphere1*2,rSphere1*2,-1);
-				drawSphere(250,250, rSphere2*2,rSphere2*2,0);
-				drawSphere(375,375, rSphere3*2,rSphere3*2,1);
+				drawSphere(125,125,rSphere1*2,rSphere1*2);
+				drawSphere(250,250, rSphere2*2,rSphere2*2);
+				drawSphere(375,375, rSphere3*2,rSphere3*2);
 				}
 			
 			/*******************************************************************************
