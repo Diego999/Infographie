@@ -60,9 +60,11 @@
 
 		<script>
 		
+			//Radius of the 3 spheres
 			var rSphere1 = 25;
 			var rSphere2 = 25;
 			var rSphere3 = 25;
+			
 			var rotY = 0; //rotation on the Y-axis (in degrees) 
 			var rotX = 0; //rotation on the X-axis (in degrees) 
 			
@@ -164,8 +166,10 @@
 				colorBuffer = getVertexBufferWithVertices(colors);
 			}
 
+			//Function to draw a sphere 
 			function drawSphere(x, y , w, h,z)
 			{
+				//Setting the viewPort (White area on screen where drawing is done)
 				glContext.viewport(x-w/2, y-h/2, w, h);
 						
 				//orthographic projection : left, right, bottom, top, near, far, dest
@@ -214,6 +218,7 @@
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 				
+				//Drawing 3 spheres on different positions
 				drawSphere(125,125,rSphere1*2,rSphere1*2,-1);
 				drawSphere(250,250, rSphere2*2,rSphere2*2,0);
 				drawSphere(375,375, rSphere3*2,rSphere3*2,1);
