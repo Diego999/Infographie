@@ -85,11 +85,17 @@
 			function checkKey(ev){
 				switch(ev.keyCode){
 					case 80: { // 'm' key
+            /*
+            Multiply the current dt by 0.9 to reduce the value by 10%.
+            */
             dt = dt*0.9;
             initBuffers();
 						break;
 					}
 					case 77: { // 'p' key
+            /*
+            Multiply the current dt by 1.1 to add 10%.
+            */
             dt = dt*1.1;
             if(dt>1.0) dt=1.0;
             initBuffers();
@@ -152,11 +158,15 @@
 				vertices = [];				
 				colors = [];
         
-        // Calculate the nomber of intermediate points necessary.
+        /*
+        Calculate the number of intermediate points necessary.
+        */
         var pointCountTheory = 1.0 / dt;
         
-        // Round the precedent calculated value, to get for example 6 intermediates points when
-        // theoretically 5.5555 are requested.
+        /*
+        Round the precedent calculated value, to get for example 6 intermediates points when
+        theoretically 5.5555 are requested.
+        */
         var pointCountUsable = Math.round(pointCountTheory);
 				
         console.log("Number of theoretical intermediate points: " + pointCountTheory);
