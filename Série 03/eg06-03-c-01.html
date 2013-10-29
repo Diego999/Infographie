@@ -42,7 +42,10 @@
 				float half_pi = 1.5708;
 				float dist = sqrt(vPosition.x * vPosition.x + vPosition.y * vPosition.y) / radius;
 			
-				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 0.0);//EQ 5 : We make it transparency, it's the background in the word case, doesn't matter. If the point is in the sphere, the alpha is changed.
+        //EQ5 : Define the default color transparent.
+        //      If the point is outside the sphere the background will appear at this point.
+        //      If the point is inside the sphere, the color will be redefined (alpha value too).
+				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 0.0);
 				
 				if (dist <= 1.0){
 					vec3 ambientColor = vec3(0.1,0.1,0.3);
@@ -61,7 +64,7 @@
 
 		<script>
 		
-			//EQ 5 : Radius of the 3 spheres
+			//EQ5 : Radius of the 3 spheres
 			var rSphere1 = 25;
 			var rSphere2 = 25;
 			var rSphere3 = 25;
@@ -88,24 +91,24 @@
 				console.log(ev.keyCode);
 				//EQ5 : Add case to control size of the spheres
 				switch(ev.keyCode){
-					case 88: //EQ5 : x
+					case 88: //EQ5 : x increments size of sphere1
 						rSphere1++;
 						break;
-					case 89: //EQ5 : y
+					case 89: //EQ5 : y decrements size of sphere1
 						if(rSphere1>0)
 							rSphere1--;
 						break;
-					case 86: //EQ5 : v
+					case 86: //EQ5 : v increments size of sphere2
 						rSphere2++;
 						break;
-					case 67://EQ5 : c
+					case 67://EQ5 : c decrements size of sphere2
 						if(rSphere2>0)
 							rSphere2--;
 						break;
-					case 78://EQ5 : n
+					case 78://EQ5 : n increments size of sphere3
 						rSphere3++;
 						break;
-					case 66://EQ5 : b
+					case 66://EQ5 : b decrements size of sphere3
 						if(rSphere3>0)
 							rSphere3--;
 						break;
@@ -168,7 +171,7 @@
 				colorBuffer = getVertexBufferWithVertices(colors);
 			}
 
-			//EQ 5 : Function to draw a sphere 
+			//EQ5 : Function to draw a sphere 
 			function drawSphere(x, y , w, h)
 			{
 				//Setting the viewPort (White area on screen where drawing is done)
@@ -212,11 +215,12 @@
 				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
 				
 				//activate z-buffer
-				//EQ 5 : We remove it because otherwise, we'll see the background rectangle with opacity 0 over the other sphere
+				//EQ5 : Deactivated the z-buffer. Otherwise we'll see the background rectangle with opacity 0 over the other sphere
 				//glContext.enable(glContext.DEPTH_TEST);
 				
-				/*EQ 5 : We enable the opacity with the option BLEND.It's not just the only use but it's common way to make objects appear transparent.
-				In the webiste http://www.opengl.org/sdk/docs/man/xhtml/glBlendFunc.xml, we can see that the best transparency implementation is using blend function with SRC_ALPHA & ONE_MINS_SRC_ALPHA*/
+				//EQ5 : We enable the opacity with the option BLEND. It's not just the only use, but it's a common way to make objects appear transparent.
+				//      On the website [1], we see that the best transparency implementation is using blend function with SRC_ALPHA & ONE_MINS_SRC_ALPHA
+        //  [1] http://www.opengl.org/sdk/docs/man/xhtml/glBlendFunc.xml
 				glContext.enable(glContext.BLEND);
 				glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
 				
