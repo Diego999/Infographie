@@ -66,6 +66,10 @@
 			var vertices = []; //JavaScript array to store the vertices of the curve
 			var colors = []; //JavaScript array to store the color assigned to each vertex
 			var indexCnt = 0; //keeps count of number of triangles in the subdivision surface
+      
+      var indicesSplitted = [];
+			var verticesSplitted = [];
+			var colorsSplitted = [];
 			
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix = mat4.create(); // The projection matrix
@@ -302,16 +306,30 @@
 								
 				    OneToFourTriangle(v1, v2, v3, sphereDivisions);
 				}
-			
-					
-				vertexBuffer = getVertexBufferWithVertices(vertices);					
-				indexBuffer = getIndexBufferWithIndices(indices);
-				console.log("Indexes : "+ indices.length);
-				console.log("Vertex : "+ vertices.length);
-				colorBuffer = getVertexBufferWithVertices(colors);
+        
+        splitBuffer();
 			}
-
-
+      
+			function splitBuffer(){
+        indicesSplitted = [];
+        verticesSplitted = [];
+        colorsSplitted = [];
+        var i = 1;
+        var TABLESIZE = 61440;//65532;
+        while( (i-1)*TABLESIZE < indices.length)
+        {
+          splitted = indices.slice((i-1)*TABLESIZE, i*TABLESIZE);
+          splitted = splitted.map(function(v){return v - (i-1)*TABLESIZE/2; });
+          
+          indicesSplitted.push(splitted);
+          colorsSplitted.push(colors.slice((i-1)*TABLESIZE*2, i*TABLESIZE*2));
+          verticesSplitted.push(vertices.slice((i-1)*TABLESIZE*3/2, i*TABLESIZE*3/2));
+          
+          i++; 
+        }
+        
+      }
+      
 			/*
 			* Draws the scene
 			*/
@@ -338,23 +356,31 @@
 
 				//send the projection and model view matrices to the vertex shader
 			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
-			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);	
-			    	
-				//1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
-				//   then ask Vertex Shader to draw lines between vertices(1.4)
-				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.2 Send the array of COLOR specifying that they are each composed of 4 parameters
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
-				glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
-
-				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
-				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-								
-				//1.4 Draw the sphere as line (/!\not line strip!!!) or triangles to approximate the sphere
-				glContext.drawElements(glContext.LINES, indices.length, glContext.UNSIGNED_SHORT,0);
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
+        
+        for(var i = 0; i < indicesSplitted.length; i++)
+        {
+          vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
+          indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
+          colorBuffer = getVertexBufferWithVertices(colorsSplitted[i]);
+              
+              
+          //1. Sending vertices(1.1), colors(1.2), and indices(1.3) to the Vertex Shader;
+          //   then ask Vertex Shader to draw lines between vertices(1.4)
+          //1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+          glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.2 Send the array of COLOR specifying that they are each composed of 4 parameters
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, colorBuffer);
+          glContext.vertexAttribPointer(prg.colorAttribute, 4, glContext.FLOAT, false, 0, 0);
+  
+          //1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+          glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                  
+          //1.4 Draw the sphere as line (/!\not line strip!!!) or triangles to approximate the sphere
+          glContext.drawElements(glContext.LINES, indicesSplitted[i].length, glContext.UNSIGNED_SHORT,0);
+        }
 			}
 			
 			/*******************************************************************************
