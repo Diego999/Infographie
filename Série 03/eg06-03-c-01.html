@@ -42,7 +42,7 @@
 				float half_pi = 1.5708;
 				float dist = sqrt(vPosition.x * vPosition.x + vPosition.y * vPosition.y) / radius;
 			
-				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 1.0);
+				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 0.0);
 				
 				if (dist <= 1.0){
 					vec3 ambientColor = vec3(0.1,0.1,0.3);
@@ -54,6 +54,7 @@
 //					finalColor = vec4(specularColor, 1.0); //--- specular light only --
 					finalColor = vec4(ambientColor + diffuseColor + specularColor, 1.0);
 				}
+				
 		   		gl_FragColor = finalColor;	
 			}
 		</script>
@@ -151,10 +152,10 @@
 				
 				indices.push(0,1,3,2);
 				
-				colors.push(0.0, 0.5, 1.0, 1.0,
-							0.0, 0.5, 1.0, 1.0,
-							0.0, 0.5, 1.0, 1.0,
-							0.0, 0.5, 1.0, 1.0);
+				colors.push(0, 0.5, 1.0, 1.0,
+									0.0, 0.5, 1.0, 1.0,
+									0.0, 0.5, 1.0, 1.0,
+									0.0, 0.5, 1.0, 1.0);
 							
 				vertices.push(-0.7, -0.7, 0.0,
 							   0.7, -0.7, 0.0,
@@ -210,7 +211,13 @@
 				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
 				
 				//activate z-buffer
-				glContext.enable(glContext.DEPTH_TEST);
+				//EQ 5 : We remove it because otherwise, we'll see the background rectangle with opacity 0 over the other sphere
+				//glContext.enable(glContext.DEPTH_TEST);
+				
+				/*EQ 5 : We enable the opacity with the option BLEND.It's not just the only use but it's common way to make objects appear transparent.
+				In the webiste http://www.opengl.org/sdk/docs/man/xhtml/glBlendFunc.xml, we can see that the best transparency implementation is using blend function with SRC_ALPHA & ONE_MINS_SRC_ALPHA*/
+				glContext.enable(glContext.BLEND);
+				glContext.blendFunc(glContext.SRC_ALPHA, glContext.ONE_MINUS_SRC_ALPHA);
 				
 				//resets color and depth buffer before drawing
 				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
