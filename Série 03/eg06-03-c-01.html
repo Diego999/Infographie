@@ -42,7 +42,7 @@
 				float half_pi = 1.5708;
 				float dist = sqrt(vPosition.x * vPosition.x + vPosition.y * vPosition.y) / radius;
 			
-				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 0.0);
+				vec4 finalColor = vec4 (1.0, 1.0, 1.0, 0.0);//EQ 5 : We make it transparency, it's the background in the word case, doesn't matter. If the point is in the sphere, the alpha is changed.
 				
 				if (dist <= 1.0){
 					vec3 ambientColor = vec3(0.1,0.1,0.3);
