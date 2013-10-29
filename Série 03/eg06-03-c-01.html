@@ -61,7 +61,7 @@
 
 		<script>
 		
-			//Radius of the 3 spheres
+			//EQ 5 : Radius of the 3 spheres
 			var rSphere1 = 25;
 			var rSphere2 = 25;
 			var rSphere3 = 25;
@@ -86,25 +86,26 @@
 			
 			function checkKey(ev){
 				console.log(ev.keyCode);
+				//EQ5 : Add case to control size of the spheres
 				switch(ev.keyCode){
-					case 88: //x
+					case 88: //EQ5 : x
 						rSphere1++;
 						break;
-					case 89: //y
+					case 89: //EQ5 : y
 						if(rSphere1>0)
 							rSphere1--;
 						break;
-					case 86: //v
+					case 86: //EQ5 : v
 						rSphere2++;
 						break;
-					case 67://c
+					case 67://EQ5 : c
 						if(rSphere2>0)
 							rSphere2--;
 						break;
-					case 78://n
+					case 78://EQ5 : n
 						rSphere3++;
 						break;
-					case 66://b
+					case 66://EQ5 : b
 						if(rSphere3>0)
 							rSphere3--;
 						break;
@@ -167,7 +168,7 @@
 				colorBuffer = getVertexBufferWithVertices(colors);
 			}
 
-			//Function to draw a sphere 
+			//EQ 5 : Function to draw a sphere 
 			function drawSphere(x, y , w, h)
 			{
 				//Setting the viewPort (White area on screen where drawing is done)
@@ -225,7 +226,7 @@
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 				
-				//Drawing 3 spheres on different positions
+				//EQ5 : Drawing 3 spheres on different positions
 				drawSphere(125,125,rSphere1*2,rSphere1*2);
 				drawSphere(250,250, rSphere2*2,rSphere2*2);
 				drawSphere(375,375, rSphere3*2,rSphere3*2);
@@ -250,7 +251,10 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-03-c : sphère parfaite avec Phong (approche naïve)", 0,1,1,1);</script>
+		
+		<!-- Change the title -->
+		<script>displayTitle("Eg06-03-c : 3 sphères parfaites avec Phong (approche naïve)", 0,1,1,1);</script>
+		<!-- Changing the user instructions -->
 		<p>	Actions disponibles :
 		<ul>
 		<li>Réduire/Augmenter le rayon de la sphère n°1 : y / x</li>

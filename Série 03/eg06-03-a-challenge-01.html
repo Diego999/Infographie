@@ -68,6 +68,8 @@
 			
 			function checkKey(ev){
 				/*
+				EQ5 :
+				
 				The problem was a purely linear algebra problem. 
 				Each transformation was applied to the local coordinated system of the sphere.  So when you wanted spin the sphere around the X axis, the X axis was those to the sphere and not the window.
 				So the solution was to apply these transformations to the global coordinated system and with this,
@@ -97,21 +99,25 @@
 						break;
 					}
 					case 65:{ // 'a' key
+						//EQ5 : Apply a new rotation to the existing  mvMatrix
 						rotY = -2.0;
 						mat4.rotate(supRotationMatrix , degToRad(rotY), [0,1, 0]);
 						break;
 					}
 					case 68:{ // 'd' key
+					//EQ5 : Apply a new rotation to the existing  mvMatrix
 						rotY = 2.0;
 						mat4.rotate(supRotationMatrix , degToRad(rotY), [0,1, 0]);
 						break;
 					}
 					case 87:{ // 'w' key
+					//EQ5 : Apply a new rotation to the existing  mvMatrix
 						rotX = -2.0;
 						mat4.rotate(supRotationMatrix , degToRad(rotX), [1, 0, 0]);
 						break;
 					}
 					case 83:{ // 's' key
+					//EQ5 : Apply a new rotation to the existing  mvMatrix
 						rotX = 2.0; 
 						mat4.rotate(supRotationMatrix , degToRad(rotX), [1, 0, 0]);
 						break;
@@ -125,6 +131,7 @@
 					break;
 				}
 				
+				//EQ5 : If rotation on x or y axes, we apply it
 				if(rotX != rotY)
 					mat4.multiply(supRotationMatrix , mvMatrix, mvMatrix);
 			}
@@ -272,8 +279,10 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-03-a : WebGL sphère, approche naïve avec des coordonnées polaires", 0,1,1,1);</script>
-		<p>	Utiliser les touches : '-' pour réduire la résolution ; '+' pour l'augmenter ; 'a' et 'd' pour appliquer une rotation autour de l'axe Y ; 'w' et 's' pour une rotation autour de l'axe X ; 't' pour faire apparaitre et disparaitre les triangles.
+		<!-- Change the title -->
+		<script>displayTitle("Eg06-03-a-Challenge-01", 0,1,1,1);</script>
+		<!-- EQ5 : Changed the user instructions -->
+		<p>	Utiliser les touches : '-' pour réduire la résolution ; '+' pour l'augmenter ; 'a' et 'd' pour appliquer une rotation autour de l'axe Y de la fenêtre ; 'w' et 's' pour une rotation autour de l'axe X de la fenêtre ; 't' pour faire apparaitre et disparaitre les triangles.
 		</p>
 		<!-- WebGL canvas -->	
 		<canvas id="webgl-canvas" width="500" height="500">

@@ -136,7 +136,7 @@
 			    var longitudeBands = sphereDivisions;
 			    var radius = 0.8;
 				
-				//Empty the color array (IMPORTANT)
+				//EQ5 : Empty the color array (IMPORTANT)
 				colors = [];
 			    
 			    // creation of the sphere structure using polar coordinates
@@ -160,9 +160,9 @@
 			            vertices.push(radius * y);
 			            vertices.push(radius * z);
 						
-						//Calculate yValue (0 for top and 1 for bottom of the sphere)
+						//EQ5 : Calculate yValue (0 for top and 1 for bottom of the sphere)
 						var yVal = (latNumber/latitudeBands);
-						//Adding in the color array
+						//EQ5 : Adding in the color array
 			            colors.push(yVal, 0.0, 1-yVal, 1.0);
 			        }
 			    }
