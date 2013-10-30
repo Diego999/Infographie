@@ -122,6 +122,7 @@
 					  //console.log(ev.keyCode); //--- DEBUG LINE ---
 					break;
 				}
+        document.getElementById("numberOfSubdivisions").innerHTML = sphereDivisions;
 			}
 			
 			//utiliy function to convert degrees to radians
@@ -414,6 +415,9 @@
 				initBuffers();
 				//Starts rendering loop, calls drawScene
 				renderLoop();
+        
+        // EQ5: show the number of subdivisions in the user interface.
+        document.getElementById("numberOfSubdivisions").innerHTML = sphereDivisions;
 			}
 		</script>
 
@@ -428,12 +432,9 @@
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
-		<h1>Dessin à partir de 6 subdivisions</h1>
-		<p>A partir de 6 subdivision (7ème étape) l'affichage est bugué.<br />
-			Ceci est dû au fait que les buffers des index du vertex sont limités à 16 bits dans WebGL.<br />
-			Donc un seul buffer ne peut contenir que 65535 vertex.<br /><br />
-			
-			<a href="http://stackoverflow.com/questions/4998278/is-there-a-limit-of-vertices-in-webgl">Source</a>
+    <!-- EQ5: Added some informations for clarity. -->
+    <h1>Subdivision count: <span id="numberOfSubdivisions"></span></h1>
+    <p>On a standard machine subdivions from 0 to 6 are processed in an acceptable time. With more than 6 subdivision it takes much longer to compute all the points.</p>
 		
 		</p>
 	</body>
