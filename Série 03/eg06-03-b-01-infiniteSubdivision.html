@@ -67,6 +67,7 @@
 			var colors = []; //JavaScript array to store the color assigned to each vertex
 			var indexCnt = 0; //keeps count of number of triangles in the subdivision surface
       
+      // EQ5: Added arrays to store the splitted sub arrays of indice, vertices and colors
       var indicesSplitted = [];
 			var verticesSplitted = [];
 			var colorsSplitted = [];
@@ -307,23 +308,38 @@
 				    OneToFourTriangle(v1, v2, v3, sphereDivisions);
 				}
         
-        splitBuffer();
+        console.log(indices.slice(0,12));
+        console.log(vertices.slice(0,18));
+        
+        // EQ5: Instead of initialize the buffer variables here, we split the arrays here
+        //      to prevent arrays with too much elements.
+        splitArrays();
 			}
       
-			function splitBuffer(){
+      // EQ5: Added function which allows to split the arrays indices, colors and vertices
+      //      in sub arrays.
+			function splitArrays(){
         indicesSplitted = [];
         verticesSplitted = [];
         colorsSplitted = [];
+        
         var i = 1;
-        var TABLESIZE = 61440;//65532;
-        while( (i-1)*TABLESIZE < indices.length)
+        var MAXELEMENT = 61440; // EQ5: Must be divisible by 2
+        
+        // EQ5: It wasn't necessary to rely the last point with the first point of two sub arrays.
+        //      This is possible, because vertices are repeated in the indices array. So far we haven't
+        //      detect problems in the rendered sphere, as long we kept a MAXELEMENT which is a multiply of 6.
+        while( (i-1)*MAXELEMENT < indices.length)
         {
-          splitted = indices.slice((i-1)*TABLESIZE, i*TABLESIZE);
-          splitted = splitted.map(function(v){return v - (i-1)*TABLESIZE/2; });
+          splitted = indices.slice((i-1)*MAXELEMENT, i*MAXELEMENT);
+          // EQ5: The indices values have to be corrected.
+          //      Without this correction the indices are to high and out of
+          //      range of colors and vertexes arrays.
+          splitted = splitted.map(function(v){return v - (i-1)*MAXELEMENT/2; });
           
           indicesSplitted.push(splitted);
-          colorsSplitted.push(colors.slice((i-1)*TABLESIZE*2, i*TABLESIZE*2));
-          verticesSplitted.push(vertices.slice((i-1)*TABLESIZE*3/2, i*TABLESIZE*3/2));
+          colorsSplitted.push(colors.slice((i-1)*MAXELEMENT*2, i*MAXELEMENT*2));
+          verticesSplitted.push(vertices.slice((i-1)*MAXELEMENT*3/2, i*MAXELEMENT*3/2));
           
           i++; 
         }
@@ -358,8 +374,10 @@
 			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
         
+        // EQ5: Execute the draw routine for each colors, indices and vertex to display to sphere.
         for(var i = 0; i < indicesSplitted.length; i++)
         {
+          // EQ5: Reinitialize each time the buffers.
           vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
           indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
           colorBuffer = getVertexBufferWithVertices(colorsSplitted[i]);
@@ -379,6 +397,7 @@
           glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
                   
           //1.4 Draw the sphere as line (/!\not line strip!!!) or triangles to approximate the sphere
+          // EQ5: pass each time the number of indices for the current splitted sub array.
           glContext.drawElements(glContext.LINES, indicesSplitted[i].length, glContext.UNSIGNED_SHORT,0);
         }
 			}
