@@ -238,15 +238,15 @@
               p3y = normals[i-8] + normals3Dy * 0.5;
               p3z = normals[i-7] + normals3Dz * 0.5;
               
-              //normals.splice(i, 0, p3x,
-              //                      p3y,
-              //                      p3z);
-              //normals.splice(i, 0, p2x,
-              //                      p2y,
-              //                      p2z);
-              //normals.splice(i, 0, p1x,
-              //                      p1y,
-              //                      p1z);
+              normals.splice(i, 0, p3x,
+                                    p3y,
+                                    p3z);
+              normals.splice(i, 0, p2x,
+                                    p2y,
+                                    p2z);
+              normals.splice(i, 0, p1x,
+                                    p1y,
+                                    p1z);
                                     
               normals.splice(i, 0, p2x,
                                    p2y,
@@ -296,15 +296,15 @@
               p3y = vertices3Dy * 0.5;
               p3z = vertices3Dz * 0.5;
              
-              //vertices.splice(i, 0, p3x,
-              //                      p3y,
-              //                      p3z);
-              //vertices.splice(i, 0, p2x,
-              //                      p2y,
-              //                      p2z);
-              //vertices.splice(i, 0, p1x,
-              //                      p1y,
-              //                      p1z);
+              vertices.splice(i, 0, p3x,
+                                    p3y,
+                                    p3z);
+              vertices.splice(i, 0, p2x,
+                                    p2y,
+                                    p2z);
+              vertices.splice(i, 0, p1x,
+                                    p1y,
+                                    p1z);
               
               vertices.splice(i, 0, p2x,
                                     p2y,
@@ -333,9 +333,9 @@
               indices.push(indices.length);
               indices.push(indices.length);
               indices.push(indices.length);
-              //indices.push(indices.length);
-              //indices.push(indices.length);
-              //indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
             }
           }
         }
