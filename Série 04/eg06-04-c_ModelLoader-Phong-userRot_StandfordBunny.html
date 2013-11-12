@@ -212,120 +212,79 @@
         { 
           for(var j = 1; j <= subdivisions; ++j)
           {
+            var newNormals = [];
+            var newVertices = [];
+            
             for(var i = vertices.length; i >= 9; i=i-9)
             {
-              normals1Dx = normals[i-9] - normals[i-6];
-              normals1Dy = normals[i-8] - normals[i-5];
-              normals1Dz = normals[i-7] - normals[i-4];
+              p1x = (normals[i-6] + normals[i-9]) * 0.5;
+              p1y = (normals[i-5] + normals[i-8]) * 0.5;
+              p1z = (normals[i-4] + normals[i-7]) * 0.5;
               
-              normals2Dx = normals[i-6] - normals[i-3];
-              normals2Dy = normals[i-5] - normals[i-2];
-              normals2Dz = normals[i-4] - normals[i-1];
+              p2x = (normals[i-3] + normals[i-6]) * 0.5;
+              p2y = (normals[i-2] + normals[i-5]) * 0.5;
+              p2z = (normals[i-1] + normals[i-4]) * 0.5;
               
-              normals3Dx = normals[i-3] - normals[i-9];
-              normals3Dy = normals[i-2] - normals[i-8];
-              normals3Dz = normals[i-1] - normals[i-7];
+              p3x = (normals[i-9] + normals[i-3]) * 0.5;
+              p3y = (normals[i-8] + normals[i-2]) * 0.5;
+              p3z = (normals[i-7] + normals[i-1]) * 0.5;
               
-              p1x = normals[i-6] + normals1Dx * 0.5;
-              p1y = normals[i-5] + normals1Dy * 0.5;
-              p1z = normals[i-4] + normals1Dz * 0.5;
+              newNormals.push(p3x, p3y, p3z);
+              newNormals.push(p2x, p2y, p2z);
+              newNormals.push(p1x, p1y, p1z);
               
-              p2x = normals[i-3] + normals2Dx * 0.5;
-              p2y = normals[i-2] + normals2Dy * 0.5;
-              p2z = normals[i-1] + normals2Dz * 0.5;
-              
-              p3x = normals[i-9] + normals3Dx * 0.5;
-              p3y = normals[i-8] + normals3Dy * 0.5;
-              p3z = normals[i-7] + normals3Dz * 0.5;
-              
-              normals.splice(i, 0, p3x,
-                                    p3y,
-                                    p3z);
-              normals.splice(i, 0, p2x,
-                                    p2y,
-                                    p2z);
-              normals.splice(i, 0, p1x,
-                                    p1y,
-                                    p1z);
-                                    
-              normals.splice(i, 0, p2x,
-                                   p2y,
-                                   p2z);
-              normals.splice(i, 0, p3x,
-                                   p3y,
-                                   p3z);
-                                   
-              normals.splice(i-3, 0, p2x,
-                                     p2y,
-                                     p2z);
-              normals.splice(i-3, 0, p1x,
-                                     p1y,
-                                     p1z);
-                                     
-              normals.splice(i-6, 0, p3x,
-                                     p3y,
-                                     p3z);
-              normals.splice(i-6, 0, p1x,
-                                     p1y,
-                                     p1z);
-              
-              
-              
-              
-              vertices1Dx = vertices[i-9] + vertices[i-6];
-              vertices1Dy = vertices[i-8] + vertices[i-5];
-              vertices1Dz = vertices[i-7] + vertices[i-4];
-                                          
-              vertices2Dx = vertices[i-6] + vertices[i-3];
-              vertices2Dy = vertices[i-5] + vertices[i-2];
-              vertices2Dz = vertices[i-4] + vertices[i-1];
-                                          
-              vertices3Dx = vertices[i-3] + vertices[i-9];
-              vertices3Dy = vertices[i-2] + vertices[i-8];
-              vertices3Dz = vertices[i-1] + vertices[i-7];
-              
-              p1x = vertices1Dx * 0.5;
-              p1y = vertices1Dy * 0.5;
-              p1z = vertices1Dz * 0.5;
-                    
-              p2x = vertices2Dx * 0.5;
-              p2y = vertices2Dy * 0.5;
-              p2z = vertices2Dz * 0.5;
-                    
-              p3x = vertices3Dx * 0.5;
-              p3y = vertices3Dy * 0.5;
-              p3z = vertices3Dz * 0.5;
+              newNormals.push(normals[i-3], normals[i-2], normals[i-1]);
+              newNormals.push(p2x, p2y, p2z);
+              newNormals.push(p3x, p3y, p3z);
              
-              vertices.splice(i, 0, p3x,
-                                    p3y,
-                                    p3z);
-              vertices.splice(i, 0, p2x,
-                                    p2y,
-                                    p2z);
-              vertices.splice(i, 0, p1x,
-                                    p1y,
-                                    p1z);
+              newNormals.push(normals[i-6], normals[i-5], normals[i-4]);
+              newNormals.push(p2x, p2y, p2z);
+              newNormals.push(p1x, p1y, p1z);
               
-              vertices.splice(i, 0, p2x,
-                                    p2y,
-                                    p2z);
-              vertices.splice(i, 0, p3x,
-                                    p3y,
-                                    p3z);
-                                   
-              vertices.splice(i-3, 0, p2x,
-                                      p2y,
-                                      p2z);
-              vertices.splice(i-3, 0, p1x,
-                                      p1y,
-                                      p1z);
-                                     
-              vertices.splice(i-6, 0, p3x,
-                                      p3y,
-                                      p3z);
-              vertices.splice(i-6, 0, p1x,
-                                      p1y,
-                                      p1z);
+              newNormals.push(normals[i-9], normals[i-8], normals[i-7]);
+              newNormals.push(p3x, p3y, p3z);
+              newNormals.push(p1x, p1y, p1z);
+              
+              
+              vertices1Dx = vertices[i-9] - vertices[i-6];
+              vertices1Dy = vertices[i-8] - vertices[i-5];
+              vertices1Dz = vertices[i-7] - vertices[i-4];
+                                          
+              vertices2Dx = vertices[i-6] - vertices[i-3];
+              vertices2Dy = vertices[i-5] - vertices[i-2];
+              vertices2Dz = vertices[i-4] - vertices[i-1];
+                                          
+              vertices3Dx = vertices[i-3] - vertices[i-9];
+              vertices3Dy = vertices[i-2] - vertices[i-8];
+              vertices3Dz = vertices[i-1] - vertices[i-7];
+              
+              p1x = vertices[i-6] + vertices1Dx;
+              p1y = vertices[i-5] + vertices1Dy;
+              p1z = vertices[i-4] + vertices1Dz;
+              
+              p2x = vertices[i-3] + vertices2Dx;
+              p2y = vertices[i-2] + vertices2Dy;
+              p2z = vertices[i-1] + vertices2Dz;
+              
+              p3x = vertices[i-9] + vertices3Dx;
+              p3y = vertices[i-8] + vertices3Dy;
+              p3z = vertices[i-7] + vertices3Dz;
+             
+              newVertices.push(p3x, p3y, p3z);
+              newVertices.push(p2x, p2y, p2z);
+              newVertices.push(p1x, p1y, p1z);
+              
+              newVertices.push(vertices[i-3], vertices[i-2], vertices[i-1]);
+              newVertices.push(p2x, p2y, p2z);
+              newVertices.push(p3x, p3y, p3z);
+              
+              newVertices.push(vertices[i-6], vertices[i-5], vertices[i-4]);
+              newVertices.push(p2x, p2y, p2z);
+              newVertices.push(p1x, p1y, p1z);
+              
+              newVertices.push(vertices[i-9], vertices[i-8], vertices[i-7]);
+              newVertices.push(p3x, p3y, p3z);
+              newVertices.push(p1x, p1y, p1z);
               
               indices.push(indices.length);
               indices.push(indices.length);
@@ -337,8 +296,16 @@
               indices.push(indices.length);
               indices.push(indices.length);
             }
+          
+            vertices = newVertices;
+            normals = newNormals;
           }
         }
+        
+        console.log("vertices: " + vertices.length + " " + vertices);
+        console.log("normals:  " + normals.length + " " + normals);
+        console.log("indices:  " + indices.length + " " + indices);
+        
 				
         splitArrays();
 				
