@@ -89,8 +89,12 @@
       var normals = [];
       var vertices = [];
       
+      var indicesSplitted = [];
+      var verticesSplitted = [];
+      var normalsSplitted = [];
+      
       var subdivisions = 0;
-      var sourceModel = /*"models/square_normals.json";*/ "models/bunny.json"
+      var sourceModel = "models/square_normals.json";/* "models/bunny.json"*/
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -204,12 +208,6 @@
         normals = payload.normals;
         vertices = payload.vertices;
         
-        console.log("Subdivisions: " + subdivisions);
-        
-				console.log("indices : "+payload.indices.length);
-				console.log("vertices: "+payload.vertices.length);
-				console.log("normals : "+payload.normals.length);
-        
         if(subdivisions > 0)
         { 
           for(var j = 1; j <= subdivisions; ++j)
@@ -240,15 +238,15 @@
               p3y = normals[i-8] + normals3Dy * 0.5;
               p3z = normals[i-7] + normals3Dz * 0.5;
               
-              normals.splice(i, 0, p3x,
-                                    p3y,
-                                    p3z);
-              normals.splice(i, 0, p2x,
-                                    p2y,
-                                    p2z);
-              normals.splice(i, 0, p1x,
-                                    p1y,
-                                    p1z);
+              //normals.splice(i, 0, p3x,
+              //                      p3y,
+              //                      p3z);
+              //normals.splice(i, 0, p2x,
+              //                      p2y,
+              //                      p2z);
+              //normals.splice(i, 0, p1x,
+              //                      p1y,
+              //                      p1z);
                                     
               normals.splice(i, 0, p2x,
                                    p2y,
@@ -274,39 +272,39 @@
               
               
               
-              vertices1Dx = vertices[i-9] - vertices[i-6];
-              vertices1Dy = vertices[i-8] - vertices[i-5];
-              vertices1Dz = vertices[i-7] - vertices[i-4];
+              vertices1Dx = vertices[i-9] + vertices[i-6];
+              vertices1Dy = vertices[i-8] + vertices[i-5];
+              vertices1Dz = vertices[i-7] + vertices[i-4];
+                                          
+              vertices2Dx = vertices[i-6] + vertices[i-3];
+              vertices2Dy = vertices[i-5] + vertices[i-2];
+              vertices2Dz = vertices[i-4] + vertices[i-1];
+                                          
+              vertices3Dx = vertices[i-3] + vertices[i-9];
+              vertices3Dy = vertices[i-2] + vertices[i-8];
+              vertices3Dz = vertices[i-1] + vertices[i-7];
               
-              vertices2Dx = vertices[i-6] - vertices[i-3];
-              vertices2Dy = vertices[i-5] - vertices[i-2];
-              vertices2Dz = vertices[i-4] - vertices[i-1];
-              
-              vertices3Dx = vertices[i-3] - vertices[i-9];
-              vertices3Dy = vertices[i-2] - vertices[i-8];
-              vertices3Dz = vertices[i-1] - vertices[i-7];
-              
-              p1x = vertices[i-6] + vertices1Dx * 0.5;
-              p1y = vertices[i-5] + vertices1Dy * 0.5;
-              p1z = vertices[i-4] + vertices1Dz * 0.5;
-              
-              p2x = vertices[i-3] + vertices2Dx * 0.5;
-              p2y = vertices[i-2] + vertices2Dy * 0.5;
-              p2z = vertices[i-1] + vertices2Dz * 0.5;
-              
-              p3x = vertices[i-9] + vertices3Dx * 0.5;
-              p3y = vertices[i-8] + vertices3Dy * 0.5;
-              p3z = vertices[i-7] + vertices3Dz * 0.5;
+              p1x = vertices1Dx * 0.5;
+              p1y = vertices1Dy * 0.5;
+              p1z = vertices1Dz * 0.5;
+                    
+              p2x = vertices2Dx * 0.5;
+              p2y = vertices2Dy * 0.5;
+              p2z = vertices2Dz * 0.5;
+                    
+              p3x = vertices3Dx * 0.5;
+              p3y = vertices3Dy * 0.5;
+              p3z = vertices3Dz * 0.5;
              
-              vertices.splice(i, 0, p3x,
-                                    p3y,
-                                    p3z);
-              vertices.splice(i, 0, p2x,
-                                    p2y,
-                                    p2z);
-              vertices.splice(i, 0, p1x,
-                                    p1y,
-                                    p1z);
+              //vertices.splice(i, 0, p3x,
+              //                      p3y,
+              //                      p3z);
+              //vertices.splice(i, 0, p2x,
+              //                      p2y,
+              //                      p2z);
+              //vertices.splice(i, 0, p1x,
+              //                      p1y,
+              //                      p1z);
               
               vertices.splice(i, 0, p2x,
                                     p2y,
@@ -335,32 +333,52 @@
               indices.push(indices.length);
               indices.push(indices.length);
               indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
+              //indices.push(indices.length);
+              //indices.push(indices.length);
+              //indices.push(indices.length);
             }
           }
         }
-        
-				console.log("new indices : "+ indices.length );
-				console.log("new vertices: "+ vertices.length );
-				console.log("new normals : "+ normals.length );
-        
-        console.log("new indices : "+ indices );
-				console.log("new vertices: "+ vertices );
-				console.log("new normals : "+ normals );
-        
-				//initializes buffers: sends data from the javascript arrays to the graphics card
-				vertexBuffer = getVertexBufferWithVertices(payload.vertices);					
-				normalsBuffer = getVertexBufferWithVertices(payload.normals);
-				indexBuffer = getIndexBufferWithIndices(payload.indices);
 				
-				// Init lights
+        splitArrays();
+				
+        // Init lights
 				initLights();
-				
-			    // Starts rendering loop, calls drawScene
-				renderLoop();
+        
+        drawScene();
 			}
+      
+      // EQ5: Added function which allows to split the arrays indices, colors and vertices
+      //      in sub arrays.
+			function splitArrays(){
+        indicesSplitted = [];
+        verticesSplitted = [];
+        normalsSplitted = [];
+        0; // EQ5: Must be a multiple of three
+        
+        // EQ5: It wasn't necessary to rely the last point with the first point of two sub arrays.
+        var i = 1;
+        var MAXELEMENT = 60000;
+        //      This is possible, because vertices are repeated in the indices array. So far we haven't
+        //      detect problems in the rendered sphere, as long we kept a MAXELEMENT which is a multiply of 6.
+        while( (i-1)*MAXELEMENT < indices.length)
+        {
+          splitted = indices.slice((i-1)*MAXELEMENT, i*MAXELEMENT);
+          // EQ5: The indices values have to be corrected.
+          //      Without this correction the indices are to high and out of
+          //      range of colors and vertexes arrays.
+          splitted = splitted.map(function(v){return v - (i-1)*MAXELEMENT; });
+          
+          indicesSplitted.push(splitted);
+          verticesSplitted.push(vertices.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
+          normalsSplitted.push(normals.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
+          
+          i++;
+        }
+        console.log(indicesSplitted.length);
+        console.log(verticesSplitted.length);
+        console.log(normalsSplitted.length);
+      }
 			
 			// Utility function to convert degrees to radians
 			function degToRad(degrees){
@@ -392,7 +410,7 @@
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 				
-			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
+			    mat4.perspective(100, c_width / c_height, 0.1, 100.0, pMatrix);
 				mat4.identity(mvMatrix);
 				
 				//Positions de object in the center of the scene 
@@ -415,24 +433,36 @@
 			    mat4.inverse(nMatrix);
 			    mat4.transpose(nMatrix);
 			    
-			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);	
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
 
-				//1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
-				//   then ask Vertex Shader to draw triangles between vertices(1.4)
-				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.2 Send the array of Vertex Normals for shading calculation
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
-				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
-				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-								
-				//1.4 Draw as triangles
-				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
-			
+        for(var i = 0; i < indicesSplitted.length; i++)
+        {
+        
+          //console.log("LIVE "+ indicesSplitted[i].length + " "+indicesSplitted[i]);
+          //console.log("LIVE "+ verticesSplitted[i].length + " "+verticesSplitted[i]);
+          //console.log("LIVE "+ normalsSplitted[i].length + " "+normalsSplitted[i]);
+          
+          // EQ5: Reinitialize each time the buffers.
+          vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
+          indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
+          normalsBuffer = getVertexBufferWithVertices(normalsSplitted[i]);
+          
+          //1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
+          //   then ask Vertex Shader to draw triangles between vertices(1.4)
+          //1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+          glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.2 Send the array of Vertex Normals for shading calculation
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+          glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+          glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                  
+          //1.4 Draw as triangles
+          glContext.drawElements(glContext.TRIANGLES, indicesSplitted[i].length, glContext.UNSIGNED_SHORT,0);
+        }
 			}
 			
 			/*******************************************************************************
@@ -446,7 +476,9 @@
 				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
 				//(vertex buffer, color and index buffer)
 				loadModel(sourceModel);
-				
+       
+        // Starts rendering loop, calls drawScene
+				renderLoop();
 			}
 		</script>
 
