@@ -86,10 +86,15 @@
 			var normalsBuffer = null;
 
 			var indices = []; //JavaScript array to store the indices of the polygon
-			
+      var normals = [];
+      var vertices = [];
+      
+      var subdivisions = 0;
+      var sourceModel = /*"models/square_normals.json";*/ "models/bunny.json"
+
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
-			var nMatrix  = mat4.create(); // The normal matrix			
+			var nMatrix  = mat4.create(); // The normal matrix		
 			
 			window.onkeydown = checkKey;
 			var delta = 5;
@@ -108,6 +113,23 @@
 					case 83: // 's'
 						rotX += delta;
 						break;
+            
+          case 49: // '+' key (from keyboard)
+          case 107: // '+' key (from num pad)
+            subdivisions++;
+            loadModel(sourceModel);
+            break;
+            
+          case 173: // '-' key (from keyboard)
+					case 109: // '-' key (from number pad)
+					case 189: // '-' key (from Mac)
+            if(subdivisions > 0)
+            {
+              subdivisions--;
+              loadModel(sourceModel);
+            }
+            break;
+
 					default:
 					  console.log(ev.keyCode); //--- DEBUG LINE ---
 					break;
@@ -165,7 +187,6 @@
 			         }
 			        else {
 			            handleLoadedModel(filename,JSON.parse(request.responseText));
-
 			        }
 			      }
 			    }
@@ -178,14 +199,157 @@
 			function handleLoadedModel(filename,payload) {			    
 			    console.info(filename + ' has been retrieved from the server');
 
-				/*	console.info("v: "+payload.vertices);
-					console.info("i: "+payload.indices);
-					console.info("c: "+payload.colors); */
-				
-				indices = payload.indices;
+        // Subdivisions
+        indices = payload.indices;
+        normals = payload.normals;
+        vertices = payload.vertices;
+        
+        console.log("Subdivisions: " + subdivisions);
+        
+				console.log("indices : "+payload.indices.length);
 				console.log("vertices: "+payload.vertices.length);
-				console.log("normals: "+payload.normals.length);
-				console.log("indices: "+indices.length);
+				console.log("normals : "+payload.normals.length);
+        
+        if(subdivisions > 0)
+        { 
+          for(var j = 1; j <= subdivisions; ++j)
+          {
+            for(var i = vertices.length; i >= 9; i=i-9)
+            {
+              normals1Dx = normals[i-9] - normals[i-6];
+              normals1Dy = normals[i-8] - normals[i-5];
+              normals1Dz = normals[i-7] - normals[i-4];
+              
+              normals2Dx = normals[i-6] - normals[i-3];
+              normals2Dy = normals[i-5] - normals[i-2];
+              normals2Dz = normals[i-4] - normals[i-1];
+              
+              normals3Dx = normals[i-3] - normals[i-9];
+              normals3Dy = normals[i-2] - normals[i-8];
+              normals3Dz = normals[i-1] - normals[i-7];
+              
+              p1x = normals[i-6] + normals1Dx * 0.5;
+              p1y = normals[i-5] + normals1Dy * 0.5;
+              p1z = normals[i-4] + normals1Dz * 0.5;
+              
+              p2x = normals[i-3] + normals2Dx * 0.5;
+              p2y = normals[i-2] + normals2Dy * 0.5;
+              p2z = normals[i-1] + normals2Dz * 0.5;
+              
+              p3x = normals[i-9] + normals3Dx * 0.5;
+              p3y = normals[i-8] + normals3Dy * 0.5;
+              p3z = normals[i-7] + normals3Dz * 0.5;
+              
+              normals.splice(i, 0, p3x,
+                                    p3y,
+                                    p3z);
+              normals.splice(i, 0, p2x,
+                                    p2y,
+                                    p2z);
+              normals.splice(i, 0, p1x,
+                                    p1y,
+                                    p1z);
+                                    
+              normals.splice(i, 0, p2x,
+                                   p2y,
+                                   p2z);
+              normals.splice(i, 0, p3x,
+                                   p3y,
+                                   p3z);
+                                   
+              normals.splice(i-3, 0, p2x,
+                                     p2y,
+                                     p2z);
+              normals.splice(i-3, 0, p1x,
+                                     p1y,
+                                     p1z);
+                                     
+              normals.splice(i-6, 0, p3x,
+                                     p3y,
+                                     p3z);
+              normals.splice(i-6, 0, p1x,
+                                     p1y,
+                                     p1z);
+              
+              
+              
+              
+              vertices1Dx = vertices[i-9] - vertices[i-6];
+              vertices1Dy = vertices[i-8] - vertices[i-5];
+              vertices1Dz = vertices[i-7] - vertices[i-4];
+              
+              vertices2Dx = vertices[i-6] - vertices[i-3];
+              vertices2Dy = vertices[i-5] - vertices[i-2];
+              vertices2Dz = vertices[i-4] - vertices[i-1];
+              
+              vertices3Dx = vertices[i-3] - vertices[i-9];
+              vertices3Dy = vertices[i-2] - vertices[i-8];
+              vertices3Dz = vertices[i-1] - vertices[i-7];
+              
+              p1x = vertices[i-6] + vertices1Dx * 0.5;
+              p1y = vertices[i-5] + vertices1Dy * 0.5;
+              p1z = vertices[i-4] + vertices1Dz * 0.5;
+              
+              p2x = vertices[i-3] + vertices2Dx * 0.5;
+              p2y = vertices[i-2] + vertices2Dy * 0.5;
+              p2z = vertices[i-1] + vertices2Dz * 0.5;
+              
+              p3x = vertices[i-9] + vertices3Dx * 0.5;
+              p3y = vertices[i-8] + vertices3Dy * 0.5;
+              p3z = vertices[i-7] + vertices3Dz * 0.5;
+             
+              vertices.splice(i, 0, p3x,
+                                    p3y,
+                                    p3z);
+              vertices.splice(i, 0, p2x,
+                                    p2y,
+                                    p2z);
+              vertices.splice(i, 0, p1x,
+                                    p1y,
+                                    p1z);
+              
+              vertices.splice(i, 0, p2x,
+                                    p2y,
+                                    p2z);
+              vertices.splice(i, 0, p3x,
+                                    p3y,
+                                    p3z);
+                                   
+              vertices.splice(i-3, 0, p2x,
+                                      p2y,
+                                      p2z);
+              vertices.splice(i-3, 0, p1x,
+                                      p1y,
+                                      p1z);
+                                     
+              vertices.splice(i-6, 0, p3x,
+                                      p3y,
+                                      p3z);
+              vertices.splice(i-6, 0, p1x,
+                                      p1y,
+                                      p1z);
+              
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+              indices.push(indices.length);
+            }
+          }
+        }
+        
+				console.log("new indices : "+ indices.length );
+				console.log("new vertices: "+ vertices.length );
+				console.log("new normals : "+ normals.length );
+        
+        console.log("new indices : "+ indices );
+				console.log("new vertices: "+ vertices );
+				console.log("new normals : "+ normals );
+        
 				//initializes buffers: sends data from the javascript arrays to the graphics card
 				vertexBuffer = getVertexBufferWithVertices(payload.vertices);					
 				normalsBuffer = getVertexBufferWithVertices(payload.normals);
@@ -281,7 +445,7 @@
 				initProgram();
 				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
 				//(vertex buffer, color and index buffer)
-				loadModel("models/bunny.json");
+				loadModel(sourceModel);
 				
 			}
 		</script>
