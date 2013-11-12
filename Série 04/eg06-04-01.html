@@ -211,9 +211,14 @@
 					normalVertexTab[i] = payload.vertices[cmpt];
 					normalVertexTab[i+1] = payload.vertices[cmpt+1];
 					normalVertexTab[i+2] = payload.vertices[cmpt+2];
-					normalVertexTab[i+3] = payload.vertices[cmpt] + payload.normals[cmpt]*1/10;
-					normalVertexTab[i+4] = payload.vertices[cmpt+1] + payload.normals[cmpt+1]*1/10;
-					normalVertexTab[i+5] = payload.vertices[cmpt+2] + payload.normals[cmpt+2]*1/10;
+					
+					// EQ 5 : normalizing the normal vector
+					var normN = Math.sqrt(payload.normals[cmpt]* payload.normals[cmpt] + payload.normals[cmpt+1] * payload.normals[cmpt+1] + payload.normals[cmpt+2] * payload.normals[cmpt+2]);
+						
+					//EQ 5 : Calculating the second point of the normal vector (normal length divided by 10)
+					normalVertexTab[i+3] = payload.vertices[cmpt] + 1/10 * payload.normals[cmpt]/normN;
+					normalVertexTab[i+4] = payload.vertices[cmpt+1] + 1/10 * payload.normals[cmpt+1]/normN;
+					normalVertexTab[i+5] = payload.vertices[cmpt+2] + 1/10 * payload.normals[cmpt+2]/normN;
 					cmpt+=3;
 				}
 				
@@ -250,9 +255,13 @@
 					n[1] = (n1[1]+n2[1]+n3[1])/3
 					n[2] = (n1[2]+n2[2]+n3[2])/3
 					
-					normalCenterTab[i+3] = normalCenterTab[i] + n[0] * 1/10;
-					normalCenterTab[i+4] = normalCenterTab[i+1] + n[1] * 1/10;
-					normalCenterTab[i+5] = normalCenterTab[i+2] + n[2] * 1/10;
+					// EQ 5 : normalizing the normal vector
+					var normN = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+					
+					//EQ 5 : Calculating the second point of the normal vector (normal length divided by 10)
+					normalCenterTab[i+3] = normalCenterTab[i] + 1/10 * n[0]/normN;
+					normalCenterTab[i+4] = normalCenterTab[i+1] + 1/10 * n[1]/normN;
+					normalCenterTab[i+5] = normalCenterTab[i+2] + 1/10 * n[2]/normN;
 				}
 				
 				
