@@ -91,6 +91,9 @@
 			// EQ 5 : Array containing the center normals (normal situated at the barycenter of the triangle)
 			var normalCenterTab;
 			
+			// EQ 5 : Maximum number of values in a vertex (found experimentally) --> Must be dividable by 6 (6 values are necessary to draw one line) --> Real limit value = 134085
+			var MAX_NB_VALUES_BUFFER = 134082;
+			
 			
 			// EQ 5 : bools for mouse buttons
 			var leftMouseDown = false;
@@ -200,9 +203,7 @@
 				
 				// EQ5 : Filling the normal vertex array 
 				var nbVertexNormals=(payload.normals.length*2);
-				
-				// EQ5 : have to limit the nomber of vertex
-				nbVertexNormals = 134084;
+                
 				normalVertexTab = new Float32Array(parseInt(nbVertexNormals));
 				var cmpt = 0;
 				for(var i = 0; i< nbVertexNormals; i+=6)
@@ -219,7 +220,7 @@
 				
 				// EQ 5 : filling the normal center array
 				var nbCenterNormals = (payload.normals.length*2/3);
-
+                
 				normalCenterTab = new Float32Array(parseInt(nbCenterNormals));
 				
 				var cmptNormals = 0;
@@ -249,9 +250,9 @@
 					n[1] = (n1[1]+n2[1]+n3[1])/3
 					n[2] = (n1[2]+n2[2]+n3[2])/3
 					
-					normalCenterTab[i+3] = normalCenterTab[i] + n[0] *1/10;
-					normalCenterTab[i+4] = normalCenterTab[i+1] + n[1] *1/10;
-					normalCenterTab[i+5] = normalCenterTab[i+2] + n[2] *1/10;
+					normalCenterTab[i+3] = normalCenterTab[i] + n[0] * 1/10;
+					normalCenterTab[i+4] = normalCenterTab[i+1] + n[1] * 1/10;
+					normalCenterTab[i+5] = normalCenterTab[i+2] + n[2] * 1/10;
 				}
 				
 				
@@ -350,41 +351,58 @@
 			// EQ 5 : Function which draw the vertex normals
 			function drawVertexNormals()
 			{
-				//EQ 5 : Setting the ambien color to blue
-				glContext.uniform3f(prg.lightAmbientUniform,0.0,0.0,1.0);
+				// EQ 5 : Separating normal array into multiple buffers (if buffer size limit reached)
+				for(var i = 0; i < normalVertexTab.length; i+=MAX_NB_VALUES_BUFFER)
+				{
+					// EQ 5 : Creating subarray (with the max number of values that can be given to the buffer)
+					var tab = normalVertexTab.subarray(i, i+MAX_NB_VALUES_BUFFER-1);
+					
+					//EQ 5 : Setting the ambien color to blue
+					glContext.uniform3f(prg.lightAmbientUniform,0.0,0.0,1.0);
 
-				var normalBuffer = glContext.createBuffer();
+					var normalBuffer = glContext.createBuffer();
 
-				// EQ 5 : Send the normals (lines are composed of 6 values)
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
-				glContext.bufferData(glContext.ARRAY_BUFFER, normalVertexTab, glContext.STATIC_DRAW);	
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-								
-				// EQ 5 : Draw as lines
-				glContext.drawElements(glContext.LINES, normalVertexTab.length/3, glContext.UNSIGNED_SHORT,0);
+					// EQ 5 : Send the normals (lines are composed of 6 values)
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+					glContext.bufferData(glContext.ARRAY_BUFFER, tab, glContext.STATIC_DRAW);	
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+									
+					// EQ 5 : Draw as lines
+					glContext.drawElements(glContext.LINES, tab.length/3, glContext.UNSIGNED_SHORT,0);
+
+					// EQ5 : Reset ambient color to default
+					glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+				}
 				
-				// EQ5 : Reset ambient color to default
-				glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+			
+				
 			}
 			
 			// EQ 5 : Function which draw the center normals
 			function drawCenterNormals()
 			{
-				//EQ 5 : Setting the ambien color to blue
-				glContext.uniform3f(prg.lightAmbientUniform,1.0,0.0,0.0);
+				// EQ 5 : Separating normal array into multiple buffers (if buffer size limit reached)
+				for(var i = 0; i < normalCenterTab.length; i+=MAX_NB_VALUES_BUFFER)
+				{
+					// EQ 5 : Creating subarray (with the max number of values that can be given to the buffer)
+					var tab = normalCenterTab.subarray(i, i+MAX_NB_VALUES_BUFFER-1);
+					
+					//EQ 5 : Setting the ambien color to red
+					glContext.uniform3f(prg.lightAmbientUniform,1.0,0.0,0.0);
 
-				var normalBuffer = glContext.createBuffer();
-				
-				// EQ 5 : Send the normals (lines are composed of 6 values)
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
-				glContext.bufferData(glContext.ARRAY_BUFFER, normalCenterTab, glContext.STATIC_DRAW);	
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-		
-				// EQ 5 : Draw as lines
-				glContext.drawElements(glContext.LINES, normalCenterTab.length/3, glContext.UNSIGNED_SHORT,0);
-				
-				// EQ5 : Reset ambient color to default
-				glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+					var normalBuffer = glContext.createBuffer();
+					
+					// EQ 5 : Send the normals (lines are composed of 6 values)
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
+					glContext.bufferData(glContext.ARRAY_BUFFER, tab, glContext.STATIC_DRAW);	
+					glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+			
+					// EQ 5 : Draw as lines
+					glContext.drawElements(glContext.LINES, tab.length/3, glContext.UNSIGNED_SHORT,0);
+					
+					// EQ5 : Reset ambient color to default
+					glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+				}
 			}
 			/*******************************************************************************
 				Starting point!! 
@@ -405,9 +423,16 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<!-- EQ5 : modification du titre -->
+		<!-- EQ 5 : modification du titre -->
 		<script>displayTitle("Eg06-04-01 : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
-		<p>	
+		
+		<!-- EQ 5 : User instructions -->
+		<p>	Actions disponibles :
+			<ul>
+				<li>Rotation de la sphère : w / a / s / d</li>
+				<li>Afficher les normales des vertexes (en bleu) : clique gauche</li>
+				<li>Afficher les normales des barycentres des triangles (en rouge) : clique droit</li>
+			</ul>
 		</p>
 		<!-- WebGL canvas -->	
 		<!-- EQ 5 : disable contextmenu on rightclick -->
