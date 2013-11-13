@@ -78,7 +78,8 @@
 		<script>
 			
 			var rotY = 0; //rotation on the Y-axis (in degrees) 
-			var rotX = 0; //rotation on the X-axis (in degrees) 
+			var rotX = 0; //rotation on the X-axis (in degrees)
+      var distance = 0;
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
@@ -94,7 +95,9 @@
       var normalsSplitted = [];
       
       var subdivisions = 0;
-      var sourceModel = "models/square_normals.json";/* "models/bunny.json"*/
+      var maxSubdivisions = 3;
+      var splittedLimit = 6750;
+      var sourceModel = /*"models/square_normals.json";*/ "models/bunny.json"
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -116,12 +119,21 @@
 						break; 
 					case 83: // 's'
 						rotX += delta;
+						break; 
+					case 88: // 'y'
+						distance += 0.1;
+						break; 
+					case 89: // 'x'
+						distance -= 0.1;
 						break;
             
           case 49: // '+' key (from keyboard)
           case 107: // '+' key (from num pad)
-            subdivisions++;
-            loadModel(sourceModel);
+            if(subdivisions < maxSubdivisions)
+            {
+              subdivisions++;
+              loadModel(sourceModel);
+            }
             break;
             
           case 173: // '-' key (from keyboard)
@@ -208,135 +220,103 @@
         normals = payload.normals;
         vertices = payload.vertices;
         
-        var maxSubdivisions = 5;
-        var maxElementsPerSplitted = 198;
+        indicesSplitted = [];
+        normalsSplitted = [];
+        verticesSplitted = [];
+        
+        for(var i = 0; i < vertices.length / splittedLimit; ++i)
+        {
+          var lower = i * splittedLimit;
+          var upper = (i + 1) * splittedLimit;
+          
+          verticesSplitted[i] = vertices.slice(lower, upper);
+          normalsSplitted[i] = normals.slice(lower, upper);
+          
+          indicesSplitted[i] = indices.slice(lower / 3, upper / 3);
+          indicesSplitted[i] = indicesSplitted[i].map(function(v){return v - lower/3});
+        }
         
         if(subdivisions > 0)
         { 
-          for(var j = 1; j <= subdivisions; ++j)
-          { 
-            for(var i = 3; i <= indices.length; i=i+3)
-            {
-              var iAx = indices[i-3]*3 + 0;
-              var iAy = indices[i-3]*3 + 1;
-              var iAz = indices[i-3]*3 + 2;
-              var iBx = indices[i-2]*3 + 0;
-              var iBy = indices[i-2]*3 + 1;
-              var iBz = indices[i-2]*3 + 2;
-              var iCx = indices[i-1]*3 + 0;
-              var iCy = indices[i-1]*3 + 1;
-              var iCz = indices[i-1]*3 + 2;
-              
-              var n1x = (normals[iBx] + normals[iAx]) * 0.5;
-              var n1y = (normals[iBy] + normals[iAy]) * 0.5;
-              var n1z = (normals[iBz] + normals[iAz]) * 0.5;
-              
-              var n2x = (normals[iCx] + normals[iBx]) * 0.5;
-              var n2y = (normals[iCy] + normals[iBy]) * 0.5;
-              var n2z = (normals[iCz] + normals[iBz]) * 0.5;
-              
-              var n3x = (normals[iAx] + normals[iCx]) * 0.5;
-              var n3y = (normals[iAy] + normals[iCy]) * 0.5;
-              var n3z = (normals[iAz] + normals[iCz]) * 0.5;
-              
-              normals.push(n1x, n1y, n1z);
-              normals.push(n2x, n2y, n2z);
-              normals.push(n3x, n3y, n3z);
-              
-              var vertices1Dx = vertices[iBx] - vertices[iAx];
-              var vertices1Dy = vertices[iBy] - vertices[iAy];
-              var vertices1Dz = vertices[iBz] - vertices[iAz];
-                                          
-              var vertices2Dx = vertices[iCx] - vertices[iBx];
-              var vertices2Dy = vertices[iCy] - vertices[iBy];
-              var vertices2Dz = vertices[iCz] - vertices[iBz];
-                                          
-              var vertices3Dx = vertices[iAx] - vertices[iCx];
-              var vertices3Dy = vertices[iAy] - vertices[iCy];
-              var vertices3Dz = vertices[iAz] - vertices[iCz];
-              
-              var p1x = vertices[iAx] + vertices1Dx * 0.5;
-              var p1y = vertices[iAy] + vertices1Dy * 0.5;
-              var p1z = vertices[iAz] + vertices1Dz * 0.5;
-              
-              var p2x = vertices[iBx] + vertices2Dx * 0.5;
-              var p2y = vertices[iBy] + vertices2Dy * 0.5;
-              var p2z = vertices[iBz] + vertices2Dz * 0.5;
-              
-              var p3x = vertices[iCx] + vertices3Dx * 0.5;
-              var p3y = vertices[iCy] + vertices3Dy * 0.5;
-              var p3z = vertices[iCz] + vertices3Dz * 0.5;
-              
-              vertices.push(p1x, p1y, p1z);
-              vertices.push(p2x, p2y, p2z);
-              vertices.push(p3x, p3y, p3z);
-              
-              var last = vertices.length/3 - 4;
-              var  iP1 = last + 1;
-              var  iP2 = last + 2;
-              var  iP3 = last + 3;
-              indices.splice(i-2, 0, iP1, iP3);
-              i += 2;
-              indices.splice(i-1, 0, iP1, iP2);
-              i += 2;
-              indices.splice(i-0, 0, iP2, iP3);
-              i += 2;
-              indices.splice(i-0, 0, iP1, iP2, iP3);
-              i += 3;
+          for(var splittedI = 0; splittedI < verticesSplitted.length; ++splittedI)
+          {
+            for(var j = 1; j <= subdivisions; ++j)
+            { 
+              for(var i = 3; i <= indicesSplitted[splittedI].length; i=i+3)
+              {
+                var iAx = indicesSplitted[splittedI][i-3]*3 + 0;
+                var iAy = indicesSplitted[splittedI][i-3]*3 + 1;
+                var iAz = indicesSplitted[splittedI][i-3]*3 + 2;
+                var iBx = indicesSplitted[splittedI][i-2]*3 + 0;
+                var iBy = indicesSplitted[splittedI][i-2]*3 + 1;
+                var iBz = indicesSplitted[splittedI][i-2]*3 + 2;
+                var iCx = indicesSplitted[splittedI][i-1]*3 + 0;
+                var iCy = indicesSplitted[splittedI][i-1]*3 + 1;
+                var iCz = indicesSplitted[splittedI][i-1]*3 + 2;
+                
+                var n1x = (normalsSplitted[splittedI][iBx] + normalsSplitted[splittedI][iAx]) * 0.5;
+                var n1y = (normalsSplitted[splittedI][iBy] + normalsSplitted[splittedI][iAy]) * 0.5;
+                var n1z = (normalsSplitted[splittedI][iBz] + normalsSplitted[splittedI][iAz]) * 0.5;
+                
+                var n2x = (normalsSplitted[splittedI][iCx] + normalsSplitted[splittedI][iBx]) * 0.5;
+                var n2y = (normalsSplitted[splittedI][iCy] + normalsSplitted[splittedI][iBy]) * 0.5;
+                var n2z = (normalsSplitted[splittedI][iCz] + normalsSplitted[splittedI][iBz]) * 0.5;
+                
+                var n3x = (normalsSplitted[splittedI][iAx] + normalsSplitted[splittedI][iCx]) * 0.5;
+                var n3y = (normalsSplitted[splittedI][iAy] + normalsSplitted[splittedI][iCy]) * 0.5;
+                var n3z = (normalsSplitted[splittedI][iAz] + normalsSplitted[splittedI][iCz]) * 0.5;
+                
+                normalsSplitted[splittedI].push(n1x, n1y, n1z);
+                normalsSplitted[splittedI].push(n2x, n2y, n2z);
+                normalsSplitted[splittedI].push(n3x, n3y, n3z);
+                
+                var vertices1Dy = verticesSplitted[splittedI][iBy] - verticesSplitted[splittedI][iAy];
+                var vertices1Dx = verticesSplitted[splittedI][iBx] - verticesSplitted[splittedI][iAx];
+                var vertices1Dz = verticesSplitted[splittedI][iBz] - verticesSplitted[splittedI][iAz];
+                                            
+                var vertices2Dx = verticesSplitted[splittedI][iCx] - verticesSplitted[splittedI][iBx];
+                var vertices2Dy = verticesSplitted[splittedI][iCy] - verticesSplitted[splittedI][iBy];
+                var vertices2Dz = verticesSplitted[splittedI][iCz] - verticesSplitted[splittedI][iBz];
+                                            
+                var vertices3Dx = verticesSplitted[splittedI][iAx] - verticesSplitted[splittedI][iCx];
+                var vertices3Dy = verticesSplitted[splittedI][iAy] - verticesSplitted[splittedI][iCy];
+                var vertices3Dz = verticesSplitted[splittedI][iAz] - verticesSplitted[splittedI][iCz];
+                
+                var p1x = verticesSplitted[splittedI][iAx] + vertices1Dx * 0.5;
+                var p1y = verticesSplitted[splittedI][iAy] + vertices1Dy * 0.5;
+                var p1z = verticesSplitted[splittedI][iAz] + vertices1Dz * 0.5;
+                
+                var p2x = verticesSplitted[splittedI][iBx] + vertices2Dx * 0.5;
+                var p2y = verticesSplitted[splittedI][iBy] + vertices2Dy * 0.5;
+                var p2z = verticesSplitted[splittedI][iBz] + vertices2Dz * 0.5;
+                
+                var p3x = verticesSplitted[splittedI][iCx] + vertices3Dx * 0.5;
+                var p3y = verticesSplitted[splittedI][iCy] + vertices3Dy * 0.5;
+                var p3z = verticesSplitted[splittedI][iCz] + vertices3Dz * 0.5;
+                
+                verticesSplitted[splittedI].push(p1x, p1y, p1z);
+                verticesSplitted[splittedI].push(p2x, p2y, p2z);
+                verticesSplitted[splittedI].push(p3x, p3y, p3z);
+                
+                var last = verticesSplitted[splittedI].length/3 - 4;
+                var  iP1 = last + 1;
+                var  iP2 = last + 2;
+                var  iP3 = last + 3;
+                indicesSplitted[splittedI].splice(i-2, 0, iP1, iP3);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-1, 0, iP1, iP2);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-0, 0, iP2, iP3);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-0, 0, iP1, iP2, iP3);
+                i += 3;
+              }
             }
           }
         }
         
-        console.log("vertices: " + vertices.length);
-        console.log("normals:  " + normals.length);
-        console.log("indices:  " + indices.length);
-        
-				
-        splitArrays();
-				
         // Init lights
 				initLights();
-        
-        drawScene();
-			}
-      
-      // EQ5: Added function which allows to split the arrays indices, colors and vertices
-      //      in sub arrays.
-			function splitArrays(){
-        indicesSplitted = [];
-        verticesSplitted = [];
-        normalsSplitted = [];
-        0; // EQ5: Must be a multiple of three
-        
-        // EQ5: It wasn't necessary to rely the last point with the first point of two sub arrays.
-        var i = 1;
-        var MAXELEMENT = 60000;
-        //      This is possible, because vertices are repeated in the indices array. So far we haven't
-        //      detect problems in the rendered sphere, as long we kept a MAXELEMENT which is a multiply of 6.
-        while( (i-1)*MAXELEMENT < indices.length)
-        {
-          splitted = indices.slice((i-1)*MAXELEMENT, i*MAXELEMENT);
-          // EQ5: The indices values have to be corrected.
-          //      Without this correction the indices are to high and out of
-          //      range of colors and vertexes arrays.
-          splitted = splitted.map(function(v){return v - (i-1)*MAXELEMENT; });
-          
-          indicesSplitted.push(splitted);
-          verticesSplitted.push(vertices.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
-          normalsSplitted.push(normals.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
-          
-          i++;
-        }
-        console.log(indicesSplitted.length);
-        console.log(verticesSplitted.length);
-        console.log(normalsSplitted.length);
-        
-        for(var i = 0; i < indicesSplitted.length; i++)
-        {
-          console.log("indices  :" + indicesSplitted[i]);
-          console.log("vertices :" + verticesSplitted[i]);
-          console.log("normals  :" + normalsSplitted[i]);
-        }
       }
 			
 			// Utility function to convert degrees to radians
@@ -369,7 +349,7 @@
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 				
-			    mat4.perspective(100, c_width / c_height, 0.1, 100.0, pMatrix);
+			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
 				mat4.identity(mvMatrix);
 				
 				//Positions de object in the center of the scene 
@@ -378,7 +358,7 @@
 			    var ty = -0.4;
 				var tz = -1.3;
 				
-				mat4.translate(mvMatrix, [tx, ty, tz]); 
+				mat4.translate(mvMatrix, [tx, ty, tz + distance]); 
 			    //this example applies a rotation on the X and Y axes
 			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
 			    mat4.rotate(mvMatrix, degToRad(rotX), [1, 0, 0]);
@@ -396,11 +376,6 @@
 
         for(var i = 0; i < indicesSplitted.length; i++)
         {
-        
-          //console.log("LIVE "+ indicesSplitted[i].length + " "+indicesSplitted[i]);
-          //console.log("LIVE "+ verticesSplitted[i].length + " "+verticesSplitted[i]);
-          //console.log("LIVE "+ normalsSplitted[i].length + " "+normalsSplitted[i]);
-          
           // EQ5: Reinitialize each time the buffers.
           vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
           indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
