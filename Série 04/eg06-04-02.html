@@ -25,15 +25,50 @@
 		varying vec3 vLightRay;
 		varying  vec3 vEyeVec;
 		
-		void main(void) {
+		varying vec3 vColor; //vColor for the fragment
 		
+		
+		uniform float uShininess;       
+	
+		// EQ 5 : Add some other lights
+		uniform vec3 uLightAmbient;
+		uniform vec3 uLightDiffuse;	
+		uniform vec3 uLightSpecular;		
+		
+		// EQ 5 : Add some material 
+		uniform vec3 uMaterialAmbiant;	
+		uniform vec3 uMaterialDiffuse;      
+		uniform vec3 uMaterialSpecular;   
+		
+		// EQ 5 : Uniform to change between Phong, Gouraud, Nothing
+		uniform int uAction;
+		
+		void main(void) 
+		{
 			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
-		    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
-		    vec4 light = vec4(uLightPosition,1.0);
-		    vLightRay = vertex.xyz - light.xyz;
-		    vEyeVec = -vec3(vertex.xyz);
+			vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+			vec4 light = vec4(uLightPosition,1.0);
+			vLightRay = vertex.xyz - light.xyz;
+			vEyeVec = -vec3(vertex.xyz);
 			
-		    gl_Position = uPMatrix * vertex;
+			gl_Position = uPMatrix * vertex;
+			
+			// EQ 5 : Gouraud
+			if(uAction == 2)
+			{
+				vec3 N = normalize(vNormal);
+				vec3 L = normalize(vLightRay);
+				float lambertTerm = dot(N,-L);// EQ 5 : cos(theta), Lambert's cosine law
+				
+				vec3 E = normalize(vEyeVec);
+				vec3 R = reflect(L, N);
+				
+				vec3 la = uLightAmbient*uMaterialAmbiant;
+				vec3 ld = uLightDiffuse*uMaterialDiffuse*lambertTerm;
+				vec3 ls = uLightSpecular*uMaterialSpecular*pow( max(dot(R, E), 0.0), uShininess);
+				
+				vColor = la + ld + ls;
+			}
 		}
 		</script>
 		
@@ -42,35 +77,55 @@
 		precision highp float;
 		#endif
 		
-		uniform float uShininess;       //shininess
-		uniform vec3 uLightAmbient;     //ambient color
-		uniform vec3 uMaterialDiffuse;      //diffuse color
-		uniform vec3 uMaterialSpecular;       //specular color
+		uniform float uShininess;       
+		
+		// EQ 5 : Add some other lights
+		uniform vec3 uLightAmbient;
+		uniform vec3 uLightDiffuse;	
+		uniform vec3 uLightSpecular;		
+		
+		// EQ 5 : Add some material 
+		uniform vec3 uMaterialAmbiant;	
+		uniform vec3 uMaterialDiffuse;      
+		uniform vec3 uMaterialSpecular;   
+		
+		// EQ 5 : Uniform to change between Phong, Gouraud, Nothing
+		uniform int uAction;
 		
 		varying vec3 vNormal;
 		varying vec3 vLightRay;
 		varying vec3 vEyeVec;
+		varying vec3 vColor;
 		
 		void main(void)
-		{
-			vec3 L = normalize(vLightRay);
-			vec3 N = normalize(vNormal);
-			
-			float lambertTerm = dot(N,-L);
-			
-			vec3 finalColor = uLightAmbient;
-			
-			if(lambertTerm > 0.0)
+		{		
+			// EQ 5 : Phong
+			if(uAction == 1)
 			{
-				finalColor += uMaterialDiffuse * lambertTerm;	
+				vec3 L = normalize(vLightRay);
+				vec3 N = normalize(vNormal);
 				
-				vec3 E = normalize(vEyeVec);
-				vec3 R = reflect(L, N);
-				float specular = pow( max(dot(R, E), 0.0), uShininess);
-				finalColor += uMaterialSpecular * specular;
+				vec3 la = uLightAmbient*uMaterialAmbiant;
+				vec3 ld = vec3(0.0, 0.0, 0.0);
+				vec3 ls = vec3(0.0, 0.0, 0.0);
+				vec3 color = vec3(0.0, 0.0, 0.0);
+				
+				float lambertTerm = dot(N,-L);//cos(theta), Lambert's cosine law
+				
+				if(lambertTerm > 0.0)
+				{
+					vec3 E = normalize(vEyeVec);
+					vec3 R = reflect(L, N);
+				
+					ld = uLightDiffuse*uMaterialDiffuse*lambertTerm;
+					ls = uLightSpecular*uMaterialSpecular*pow( max(dot(R, E), 0.0), uShininess);
+				}
+				
+				color = la + ld + ls;
+				gl_FragColor = vec4(color, 1.0);
 			}
-			
-			gl_FragColor = vec4(finalColor, 1.0);
+			else
+				gl_FragColor = vec4(vColor, 1.0);
 		
 		}
 		</script>
@@ -78,6 +133,7 @@
 		<script>
 			var rotX = 0.0; //rotation on the X-axis (in degrees) 
 			var rotY = 0.0; //rotation on the Y-axis (in degrees) 
+			var distance = -2;
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
@@ -94,18 +150,61 @@
 			
 			window.onkeydown = checkKey;
 			
+			var phong = false;
+			var gouraud = false;
+			var action = 0;
+			
 			function checkKey(ev){
-				
+				var delta = 5;
 				switch(ev.keyCode){
 					case 189: // '-' key on mac keyboard
 					case 173: // '-' key (from keyboard)
 					case 109: // '-' key (from number pad)
+					case 80://p
+						phong = !phong;
+						if(phong)
+						{
+							gouraud = false;
+							action = 1;
+						}
+						else
+							action = 0;
+						break;
+						
+					case 71://g
+						gouraud = !gouraud;
+						if(gouraud)
+						{
+							phong = false;
+							action = 2;
+						}
+						else
+							action = 0;
+						break;
+					case 65: // 'a' 
+						rotY -= delta;
+						break;
+					case 68: // 'd' 
+						rotY += delta;
+						break;
+					case 87: // 'w'
+						rotX -= delta;
+						break; 
+					case 83: // 's'
+						rotX += delta;
+						break;
+					case 81: // 'q'
+						distance += 0.1;
+						break;
+					case 69: // 'e'
+						distance -= 0.1;
+						break;
 					default:
-					  //console.log(ev.keyCode); //--- DEBUG LINE ---
+					  console.log(ev.keyCode); //--- DEBUG LINE ---
 					break;
 				}
+				glContext.uniform1i(glContext.getUniformLocation(prg, 'uAction'), action);//To compute the color
 			}
-
 
 			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
 			function initShaderParameters(prg){
@@ -130,7 +229,12 @@
 			    
 				//--- Information for the Fragment Shader ---
 				prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
+				
 			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.lightDiffuseUniform        = glContext.getUniformLocation(prg, 'uLightDiffuse');
+			    prg.lightSpecularUniform        = glContext.getUniformLocation(prg, 'uLightSpecular');
+				
+				prg.materialAmbiantUniform     = glContext.getUniformLocation(prg, 'uMaterialAmbiant');
 			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
 			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
 			}
@@ -195,9 +299,15 @@
 			//initializes light position and colors
 			function initLights(){
 			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+				
 			    glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
-				glContext.uniform3f(prg.materialSpecularUniform, 0.5,0.5,0.5);	
-				glContext.uniform3f(prg.materialDiffuseUniform, 0.8,0.3,0.3);
+			    glContext.uniform3f(prg.lightDiffuseUniform,1.0, 1.0, 1.0);
+			    glContext.uniform3f(prg.lightSpecularUniform, 0.8, 0.8, 0.8);
+				
+				glContext.uniform3f(prg.materialAmbiantUniform, 1.0, 1.0, 1.0);	
+				glContext.uniform3f(prg.materialSpecularUniform, 1.0, 1.0, 1.0);	
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.5, 0.5, 0.5);
+				
 			    glContext.uniform1f(prg.shininessUniform, 24.0);
 			}
 			
@@ -223,14 +333,11 @@
 				//model view matrix:
 				mat4.identity(mvMatrix);				
 				//sets the camera to a reasonable distance to view the part (far compared to the square: the teapot is relatively big)
-			    var distance = -35;
+			    
 				mat4.translate(mvMatrix, [0.0, 0, distance]); 
 			    //this example applies a rotation on the X and Y axes
 			    mat4.rotate(mvMatrix, degToRad(rotX), [1, 0, 0]);
 			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
-			  
-				rotX += 0.05;
-				rotY += 1.0;
 
 				//send the projection and model view matrices to the vertex shader
 			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
@@ -270,7 +377,7 @@
 				initProgram();
 				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
 				//(vertex buffer, color and index buffer)
-				loadModel("models/teapot.json");
+				loadModel("models/bunny.json");
 				
 			}
 		</script>
@@ -279,8 +386,15 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-04-a : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
-		<p>	
+		<script>displayTitle("Eg06-04-02 : Visualisation shading de Phong et de Gouraud", 0,1,1,1);</script>
+		<p>	Actions disponibles :
+			<ul>
+				<li>Rotation du lapin : w / a / s / d</li>
+				<li>Zoom avant : q</li>
+				<li>Zoom arrière : e</li>
+				<li>Shading de Phong : p</li>
+				<li>Shading de Gouraud : g</li>
+			</ul>
 		</p>
 		<!-- WebGL canvas -->	
 		<canvas id="webgl-canvas" width="500" height="500">
