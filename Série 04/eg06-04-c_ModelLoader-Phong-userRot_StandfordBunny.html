@@ -208,103 +208,88 @@
         normals = payload.normals;
         vertices = payload.vertices;
         
+        var maxSubdivisions = 5;
+        var maxElementsPerSplitted = 198;
+        
         if(subdivisions > 0)
         { 
           for(var j = 1; j <= subdivisions; ++j)
-          {
-            var newNormals = [];
-            var newVertices = [];
-            
-            for(var i = vertices.length; i >= 9; i=i-9)
+          { 
+            for(var i = 3; i <= indices.length; i=i+3)
             {
-              p1x = (normals[i-6] + normals[i-9]) * 0.5;
-              p1y = (normals[i-5] + normals[i-8]) * 0.5;
-              p1z = (normals[i-4] + normals[i-7]) * 0.5;
+              var iAx = indices[i-3]*3 + 0;
+              var iAy = indices[i-3]*3 + 1;
+              var iAz = indices[i-3]*3 + 2;
+              var iBx = indices[i-2]*3 + 0;
+              var iBy = indices[i-2]*3 + 1;
+              var iBz = indices[i-2]*3 + 2;
+              var iCx = indices[i-1]*3 + 0;
+              var iCy = indices[i-1]*3 + 1;
+              var iCz = indices[i-1]*3 + 2;
               
-              p2x = (normals[i-3] + normals[i-6]) * 0.5;
-              p2y = (normals[i-2] + normals[i-5]) * 0.5;
-              p2z = (normals[i-1] + normals[i-4]) * 0.5;
+              var n1x = (normals[iBx] + normals[iAx]) * 0.5;
+              var n1y = (normals[iBy] + normals[iAy]) * 0.5;
+              var n1z = (normals[iBz] + normals[iAz]) * 0.5;
               
-              p3x = (normals[i-9] + normals[i-3]) * 0.5;
-              p3y = (normals[i-8] + normals[i-2]) * 0.5;
-              p3z = (normals[i-7] + normals[i-1]) * 0.5;
+              var n2x = (normals[iCx] + normals[iBx]) * 0.5;
+              var n2y = (normals[iCy] + normals[iBy]) * 0.5;
+              var n2z = (normals[iCz] + normals[iBz]) * 0.5;
               
-              newNormals.push(p3x, p3y, p3z);
-              newNormals.push(p2x, p2y, p2z);
-              newNormals.push(p1x, p1y, p1z);
+              var n3x = (normals[iAx] + normals[iCx]) * 0.5;
+              var n3y = (normals[iAy] + normals[iCy]) * 0.5;
+              var n3z = (normals[iAz] + normals[iCz]) * 0.5;
               
-              newNormals.push(normals[i-3], normals[i-2], normals[i-1]);
-              newNormals.push(p2x, p2y, p2z);
-              newNormals.push(p3x, p3y, p3z);
-             
-              newNormals.push(normals[i-6], normals[i-5], normals[i-4]);
-              newNormals.push(p2x, p2y, p2z);
-              newNormals.push(p1x, p1y, p1z);
+              normals.push(n1x, n1y, n1z);
+              normals.push(n2x, n2y, n2z);
+              normals.push(n3x, n3y, n3z);
               
-              newNormals.push(normals[i-9], normals[i-8], normals[i-7]);
-              newNormals.push(p3x, p3y, p3z);
-              newNormals.push(p1x, p1y, p1z);
-              
-              
-              vertices1Dx = vertices[i-9] - vertices[i-6];
-              vertices1Dy = vertices[i-8] - vertices[i-5];
-              vertices1Dz = vertices[i-7] - vertices[i-4];
+              var vertices1Dx = vertices[iBx] - vertices[iAx];
+              var vertices1Dy = vertices[iBy] - vertices[iAy];
+              var vertices1Dz = vertices[iBz] - vertices[iAz];
                                           
-              vertices2Dx = vertices[i-6] - vertices[i-3];
-              vertices2Dy = vertices[i-5] - vertices[i-2];
-              vertices2Dz = vertices[i-4] - vertices[i-1];
+              var vertices2Dx = vertices[iCx] - vertices[iBx];
+              var vertices2Dy = vertices[iCy] - vertices[iBy];
+              var vertices2Dz = vertices[iCz] - vertices[iBz];
                                           
-              vertices3Dx = vertices[i-3] - vertices[i-9];
-              vertices3Dy = vertices[i-2] - vertices[i-8];
-              vertices3Dz = vertices[i-1] - vertices[i-7];
+              var vertices3Dx = vertices[iAx] - vertices[iCx];
+              var vertices3Dy = vertices[iAy] - vertices[iCy];
+              var vertices3Dz = vertices[iAz] - vertices[iCz];
               
-              p1x = vertices[i-6] + vertices1Dx;
-              p1y = vertices[i-5] + vertices1Dy;
-              p1z = vertices[i-4] + vertices1Dz;
+              var p1x = vertices[iAx] + vertices1Dx * 0.5;
+              var p1y = vertices[iAy] + vertices1Dy * 0.5;
+              var p1z = vertices[iAz] + vertices1Dz * 0.5;
               
-              p2x = vertices[i-3] + vertices2Dx;
-              p2y = vertices[i-2] + vertices2Dy;
-              p2z = vertices[i-1] + vertices2Dz;
+              var p2x = vertices[iBx] + vertices2Dx * 0.5;
+              var p2y = vertices[iBy] + vertices2Dy * 0.5;
+              var p2z = vertices[iBz] + vertices2Dz * 0.5;
               
-              p3x = vertices[i-9] + vertices3Dx;
-              p3y = vertices[i-8] + vertices3Dy;
-              p3z = vertices[i-7] + vertices3Dz;
-             
-              newVertices.push(p3x, p3y, p3z);
-              newVertices.push(p2x, p2y, p2z);
-              newVertices.push(p1x, p1y, p1z);
+              var p3x = vertices[iCx] + vertices3Dx * 0.5;
+              var p3y = vertices[iCy] + vertices3Dy * 0.5;
+              var p3z = vertices[iCz] + vertices3Dz * 0.5;
               
-              newVertices.push(vertices[i-3], vertices[i-2], vertices[i-1]);
-              newVertices.push(p2x, p2y, p2z);
-              newVertices.push(p3x, p3y, p3z);
+              vertices.push(p1x, p1y, p1z);
+              vertices.push(p2x, p2y, p2z);
+              vertices.push(p3x, p3y, p3z);
               
-              newVertices.push(vertices[i-6], vertices[i-5], vertices[i-4]);
-              newVertices.push(p2x, p2y, p2z);
-              newVertices.push(p1x, p1y, p1z);
-              
-              newVertices.push(vertices[i-9], vertices[i-8], vertices[i-7]);
-              newVertices.push(p3x, p3y, p3z);
-              newVertices.push(p1x, p1y, p1z);
-              
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
-              indices.push(indices.length);
+              var last = vertices.length/3 - 4;
+              var  iP1 = last + 1;
+              var  iP2 = last + 2;
+              var  iP3 = last + 3;
+              indices.splice(i-2, 0, iP1, iP3);
+              i += 2;
+              indices.splice(i-1, 0, iP1, iP2);
+              i += 2;
+              indices.splice(i-0, 0, iP2, iP3);
+              i += 2;
+              indices.splice(i-0, 0, iP1, iP2, iP3);
+              i += 3;
             }
-          
-            vertices = newVertices;
-            normals = newNormals;
           }
         }
         
-        console.log("vertices: " + vertices.length + " " + vertices);
-        console.log("normals:  " + normals.length + " " + normals);
-        console.log("indices:  " + indices.length + " " + indices);
+        console.log("vertices: " + vertices.length);
+        console.log("normals:  " + normals.length);
+        console.log("indices:  " + indices.length);
         
 				
         splitArrays();
@@ -345,6 +330,13 @@
         console.log(indicesSplitted.length);
         console.log(verticesSplitted.length);
         console.log(normalsSplitted.length);
+        
+        for(var i = 0; i < indicesSplitted.length; i++)
+        {
+          console.log("indices  :" + indicesSplitted[i]);
+          console.log("vertices :" + verticesSplitted[i]);
+          console.log("normals  :" + normalsSplitted[i]);
+        }
       }
 			
 			// Utility function to convert degrees to radians
