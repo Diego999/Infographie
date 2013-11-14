@@ -79,7 +79,7 @@
 			
 			var rotY = 0; //rotation on the Y-axis (in degrees) 
 			var rotX = 0; //rotation on the X-axis (in degrees)
-      var distance = 0;
+      var distance = 0; // EQ5: Variable which stores the current distance to the model
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
@@ -87,17 +87,16 @@
 			var normalsBuffer = null;
 
 			var indices = []; //JavaScript array to store the indices of the polygon
-      var normals = [];
-      var vertices = [];
+      var normals = []; // EQ5: Array stores normals
+      var vertices = []; // EQ5: Array stores vertices
       
-      var indicesSplitted = [];
-      var verticesSplitted = [];
-      var normalsSplitted = [];
+      var indicesSplitted = []; // EQ5: Indices stored in multiple arrays
+      var verticesSplitted = []; // EQ5: Vertices stored in multiple arrays
+      var normalsSplitted = []; // EQ5: Normals stored in multiple arrays
       
-      var subdivisions = 0;
-      var maxSubdivisions = 4;
+      var subdivisions = 0; // EQ5: Stores the actual number of subdivision.
+      var maxSubdivisions = 4; // EQ5: Defines the maximal number of executable subdivisions.
       var sourceModel = "models/bunny.json";
-      //var sourceModel = "models/square_normals.json";
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -119,14 +118,15 @@
 						break; 
 					case 83: // 's'
 						rotX += delta;
-						break; 
-					case 88: // 'y'
+						break;
+					case 88: // EQ5: catch 'y' key for the zooom functionaliy
 						distance += 0.1;
 						break; 
-					case 89: // 'x'
+					case 89: // EQ5: catch 'x' key for the zooom functionaliy
 						distance -= 0.1;
 						break;
             
+          // EQ5: catch '+' key and increment the number of subdivisions (if valid).
           case 49: // '+' key (from keyboard)
           case 107: // '+' key (from num pad)
             if(subdivisions <= maxSubdivisions)
@@ -135,7 +135,8 @@
               loadModel(sourceModel);
             }
             break;
-            
+          
+          // EQ5: catch '-' key and decrement the number of subdivisions (if valid).
           case 173: // '-' key (from keyboard)
 					case 109: // '-' key (from number pad)
 					case 189: // '-' key (from Mac)
@@ -206,6 +207,8 @@
 			        }
 			      }
 			    }
+          
+          // EQ5: Indicate to user that javascript is executing (heavy processing).
           setRunning(true);
 			    request.send();
 			}
@@ -216,19 +219,23 @@
 			function handleLoadedModel(filename,payload) {			    
 			    console.info(filename + ' has been retrieved from the server');
 
-        // Subdivisions
+        // EQ5: Initializes the arrays to execute the subdivision process.
         indices = payload.indices;
         normals = payload.normals;
         vertices = payload.vertices;
         
+        // EQ5: Only enters in the loop when necessary.
         if(subdivisions > 0)
-        { 
+        {
+        
+          // EQ5: Execute the 'subdivions' times the subdvision process.
           for(var j = 1; j <= subdivisions; ++j)
           {
             var normalsNew = [];
             var verticesNew = [];
             var indicesNew = [];
             
+            // EQ5: Subdivise each triangle in 4 new subtriangles.
             for(var i = vertices.length; i >= 9; i=i-9)
             {
               ax = normals[i-9];
@@ -240,7 +247,8 @@
               cx = normals[i-3];
               cy = normals[i-2];
               cz = normals[i-1];
-              
+             
+              // EQ5: Calculate the new normal vectors for the three new points
               p1x = (bx + ax) * 0.5;
               p1y = (by + ay) * 0.5;
               p1z = (bz + az) * 0.5;
@@ -253,6 +261,7 @@
               p3y = (ay + cy) * 0.5;
               p3z = (az + cz) * 0.5;
               
+              // EQ5: Append the normal vectors for the 4 triangles
               normalsNew.push(p3x, p3y, p3z);
               normalsNew.push(p2x, p2y, p2z);
               normalsNew.push(p1x, p1y, p1z);
@@ -270,6 +279,7 @@
               normalsNew.push(p3x, p3y, p3z);
               
               
+              
               ax = vertices[i-9];
               ay = vertices[i-8];
               az = vertices[i-7];
@@ -280,6 +290,7 @@
               cy = vertices[i-2];
               cz = vertices[i-1];
               
+              // EQ5: Calculate the three intermediate positions
               vertices1Dx = bx - ax;
               vertices1Dy = by - ay;
               vertices1Dz = bz - az;
@@ -304,6 +315,8 @@
               p3y = cy + vertices3Dy * 0.5;
               p3z = cz + vertices3Dz * 0.5;
              
+              // EQ5: Append the new positions in combination with the three old positions
+              //      in the right order to the verticesNew array.
               verticesNew.push(p3x, p3y, p3z);
               verticesNew.push(p2x, p2y, p2z);
               verticesNew.push(p1x, p1y, p1z);
@@ -320,6 +333,7 @@
               verticesNew.push(p1x, p1y, p1z);
               verticesNew.push(p3x, p3y, p3z);
               
+              // EQ5: Fill the indices array with 12 new values.
               for(var k = 0; k < 12; ++k) { indicesNew.push(indicesNew.length); }
             }
             normals = normalsNew;
@@ -338,18 +352,15 @@
         setRunning(false);
       }
       
-      // EQ5: Added function which allows to split the arrays indices, colors and vertices
+      // EQ5: Function allows split the arrays indices, colors and vertices
       //      in sub arrays.
       function splitArrays(){
         indicesSplitted = [];
         verticesSplitted = [];
         normalsSplitted = [];
         
-        // EQ5: It wasn't necessary to rely the last point with the first point of two sub arrays.
         var i = 1;
-        var MAXELEMENT = 64500;
-        //      This is possible, because vertices are repeated in the indices array. So far we haven't
-        //      detect problems in the rendered sphere, as long we kept a MAXELEMENT which is a multiply of 6.
+        var MAXELEMENT = 64500; // Has to be a multiple of 3
         while( (i-1)*MAXELEMENT < indices.length)
         {
           splitted = indices.slice((i-1)*MAXELEMENT, i*MAXELEMENT);
@@ -405,6 +416,7 @@
 			    var ty = -0.4;
 				var tz = -1.3;
 				
+        // EQ5: appended the zoom distance to the Z value.
 				mat4.translate(mvMatrix, [tx, ty, tz + distance]); 
 			    //this example applies a rotation on the X and Y axes
 			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
@@ -421,6 +433,7 @@
 			    
 			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
 
+        // EQ5: bind and display each of the splitted array vertices, normals and indices sets 
         for(var i = 0; i < indicesSplitted.length; i++)
         {
           // EQ5: Reinitialize each time the buffers.
@@ -459,12 +472,13 @@
 				loadModel(sourceModel);
        
         // Starts rendering loop, calls drawScene
-				renderLoop();
+        renderLoop();
         
+        // EQ5: Show some information to the user. 
         udpateInformations();
 			}
       
-      
+      // EQ5: Method actualizes the information on the html user interface.
       function udpateInformations()
       {
         document.getElementById("numberOfSubdivisions").innerHTML = subdivisions;
@@ -472,7 +486,9 @@
         document.getElementById("verticesCount").innerHTML = indices.length;
         document.getElementById("splittedArrayCount").innerHTML = normalsSplitted.length;
       }
-      
+
+      // EQ5: Allows indicating the process execution staten(running or not) to the user
+      //      Displays or hides an image.
       function setRunning(running)
       {
         document.getElementById("running").style.visibility = (running ? 'visible' : 'hidden');
@@ -490,6 +506,8 @@
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
+    
+    <!-- EQ5: Display some cool and informational stuff -->
     <p><image id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
     <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
     <p>Vertices count: <span id="verticesCount"></span></p>
