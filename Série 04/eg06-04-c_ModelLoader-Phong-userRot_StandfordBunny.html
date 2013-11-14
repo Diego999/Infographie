@@ -97,7 +97,8 @@
       var subdivisions = 0;
       var maxSubdivisions = 3;
       var splittedLimit = 6750;
-      var sourceModel = /*"models/square_normals.json";*/ "models/bunny.json"
+      var verticesCount = 0;
+      var sourceModel = "models/bunny.json";
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -224,6 +225,9 @@
         normalsSplitted = [];
         verticesSplitted = [];
         
+        
+        verticesCount = indices.length;
+        
         for(var i = 0; i < vertices.length / splittedLimit; ++i)
         {
           var lower = i * splittedLimit;
@@ -237,11 +241,12 @@
         }
         
         if(subdivisions > 0)
-        { 
+        {
+          verticesCount = 0;
           for(var splittedI = 0; splittedI < verticesSplitted.length; ++splittedI)
           {
             for(var j = 1; j <= subdivisions; ++j)
-            { 
+            {
               for(var i = 3; i <= indicesSplitted[splittedI].length; i=i+3)
               {
                 var iAx = indicesSplitted[splittedI][i-3]*3 + 0;
@@ -312,11 +317,14 @@
                 i += 3;
               }
             }
+            verticesCount += indicesSplitted[splittedI].length;
           }
         }
         
         // Init lights
 				initLights();
+        
+        udpateInformations();
       }
 			
 			// Utility function to convert degrees to radians
@@ -413,7 +421,16 @@
        
         // Starts rendering loop, calls drawScene
 				renderLoop();
+        
+        udpateInformations();
 			}
+      
+      
+      function udpateInformations()
+      {
+        document.getElementById("numberOfSubdivisions").innerHTML = subdivisions;
+        document.getElementById("verticesCount").innerHTML = verticesCount;
+      }
 		</script>
 
 	</head>
@@ -427,6 +444,8 @@
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
+    <p>Subdivision count: <span id="numberOfSubdivisions"></span></p>
+    <p>Vertices count: <span id="verticesCount"></span></p>
 	</body>
 
 
