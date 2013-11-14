@@ -327,14 +327,14 @@
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 									    
-			    mat4.perspective(60, c_width / c_height, 1.0, 100.0, pMatrix);
+			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
 
 
 				//model view matrix:
 				mat4.identity(mvMatrix);				
 				//sets the camera to a reasonable distance to view the part (far compared to the square: the teapot is relatively big)
 			    
-				mat4.translate(mvMatrix, [0.0, 0, distance]); 
+				mat4.translate(mvMatrix, [0, -0.4,distance]); 
 			    //this example applies a rotation on the X and Y axes
 			    mat4.rotate(mvMatrix, degToRad(rotX), [1, 0, 0]);
 			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
