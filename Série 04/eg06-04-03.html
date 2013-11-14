@@ -223,123 +223,118 @@
         indices = payload.indices;
         normals = payload.normals;
         vertices = payload.vertices;
-        
-        // EQ5: Only enters in the loop when necessary.
-        if(subdivisions > 0)
+       
+        // EQ5: Execute the 'subdivions' times the subdvision process.
+        for(var j = 0; j < subdivisions; ++j)
         {
-        
-          // EQ5: Execute the 'subdivions' times the subdvision process.
-          for(var j = 1; j <= subdivisions; ++j)
+          var normalsNew = [];
+          var verticesNew = [];
+          var indicesNew = [];
+          
+          // EQ5: Subdivise each triangle in 4 new subtriangles.
+          for(var i = vertices.length; i >= 9; i=i-9)
           {
-            var normalsNew = [];
-            var verticesNew = [];
-            var indicesNew = [];
+            ax = normals[i-9];
+            ay = normals[i-8];
+            az = normals[i-7];
+            bx = normals[i-6];
+            by = normals[i-5];
+            bz = normals[i-4];
+            cx = normals[i-3];
+            cy = normals[i-2];
+            cz = normals[i-1];
+           
+            // EQ5: Calculate the new normal vectors for the three new points
+            p1x = (bx + ax) * 0.5;
+            p1y = (by + ay) * 0.5;
+            p1z = (bz + az) * 0.5;
             
-            // EQ5: Subdivise each triangle in 4 new subtriangles.
-            for(var i = vertices.length; i >= 9; i=i-9)
-            {
-              ax = normals[i-9];
-              ay = normals[i-8];
-              az = normals[i-7];
-              bx = normals[i-6];
-              by = normals[i-5];
-              bz = normals[i-4];
-              cx = normals[i-3];
-              cy = normals[i-2];
-              cz = normals[i-1];
-             
-              // EQ5: Calculate the new normal vectors for the three new points
-              p1x = (bx + ax) * 0.5;
-              p1y = (by + ay) * 0.5;
-              p1z = (bz + az) * 0.5;
-              
-              p2x = (cx + bx) * 0.5;
-              p2y = (cy + by) * 0.5;
-              p2z = (cz + bz) * 0.5;
-              
-              p3x = (ax + cx) * 0.5;
-              p3y = (ay + cy) * 0.5;
-              p3z = (az + cz) * 0.5;
-              
-              // EQ5: Append the normal vectors for the 4 triangles
-              normalsNew.push(p3x, p3y, p3z);
-              normalsNew.push(p2x, p2y, p2z);
-              normalsNew.push(p1x, p1y, p1z);
+            p2x = (cx + bx) * 0.5;
+            p2y = (cy + by) * 0.5;
+            p2z = (cz + bz) * 0.5;
+            
+            p3x = (ax + cx) * 0.5;
+            p3y = (ay + cy) * 0.5;
+            p3z = (az + cz) * 0.5;
+            
+            // EQ5: Append the normal vectors for the 4 triangles
+            normalsNew.push(p3x, p3y, p3z);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p1x, p1y, p1z);
 
-              normalsNew.push(cx, cy, cz);
-              normalsNew.push(p2x, p2y, p2z);
-              normalsNew.push(p3x, p3y, p3z);
-              
-              normalsNew.push(bx, by, bz);
-              normalsNew.push(p2x, p2y, p2z);
-              normalsNew.push(p1x, p1y, p1z);
-              
-              normalsNew.push(ax, ay, az);
-              normalsNew.push(p1x, p1y, p1z);
-              normalsNew.push(p3x, p3y, p3z);
-              
-              
-              
-              ax = vertices[i-9];
-              ay = vertices[i-8];
-              az = vertices[i-7];
-              bx = vertices[i-6];
-              by = vertices[i-5];
-              bz = vertices[i-4];
-              cx = vertices[i-3];
-              cy = vertices[i-2];
-              cz = vertices[i-1];
-              
-              // EQ5: Calculate the three intermediate positions
-              vertices1Dx = bx - ax;
-              vertices1Dy = by - ay;
-              vertices1Dz = bz - az;
-              
-              vertices2Dx = cx - bx;
-              vertices2Dy = cy - by;
-              vertices2Dz = cz - bz;
-              
-              vertices3Dx = ax - cx;
-              vertices3Dy = ay - cy;
-              vertices3Dz = az - cz;
-              
-              p1x = ax + vertices1Dx * 0.5;
-              p1y = ay + vertices1Dy * 0.5;
-              p1z = az + vertices1Dz * 0.5;
-                    
-              p2x = bx + vertices2Dx * 0.5;
-              p2y = by + vertices2Dy * 0.5;
-              p2z = bz + vertices2Dz * 0.5;
-              
-              p3x = cx + vertices3Dx * 0.5;
-              p3y = cy + vertices3Dy * 0.5;
-              p3z = cz + vertices3Dz * 0.5;
-             
-              // EQ5: Append the new positions in combination with the three old positions
-              //      in the right order to the verticesNew array.
-              verticesNew.push(p3x, p3y, p3z);
-              verticesNew.push(p2x, p2y, p2z);
-              verticesNew.push(p1x, p1y, p1z);
-              
-              verticesNew.push(cx, cy, cz);
-              verticesNew.push(p2x, p2y, p2z);
-              verticesNew.push(p3x, p3y, p3z);
-              
-              verticesNew.push(bx, by, bz);
-              verticesNew.push(p2x, p2y, p2z);
-              verticesNew.push(p1x, p1y, p1z);
-              
-              verticesNew.push(ax, ay, az);
-              verticesNew.push(p1x, p1y, p1z);
-              verticesNew.push(p3x, p3y, p3z);
-              
-              // EQ5: Fill the indices array with 12 new values.
-              for(var k = 0; k < 12; ++k) { indicesNew.push(indicesNew.length); }
-            }
-            normals = normalsNew;
-            vertices = verticesNew;
-            indices = indicesNew;
+            normalsNew.push(cx, cy, cz);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p3x, p3y, p3z);
+            
+            normalsNew.push(bx, by, bz);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p1x, p1y, p1z);
+            
+            normalsNew.push(ax, ay, az);
+            normalsNew.push(p1x, p1y, p1z);
+            normalsNew.push(p3x, p3y, p3z);
+            
+            
+            
+            ax = vertices[i-9];
+            ay = vertices[i-8];
+            az = vertices[i-7];
+            bx = vertices[i-6];
+            by = vertices[i-5];
+            bz = vertices[i-4];
+            cx = vertices[i-3];
+            cy = vertices[i-2];
+            cz = vertices[i-1];
+            
+            // EQ5: Calculate the three intermediate positions
+            vertices1Dx = bx - ax;
+            vertices1Dy = by - ay;
+            vertices1Dz = bz - az;
+            
+            vertices2Dx = cx - bx;
+            vertices2Dy = cy - by;
+            vertices2Dz = cz - bz;
+            
+            vertices3Dx = ax - cx;
+            vertices3Dy = ay - cy;
+            vertices3Dz = az - cz;
+            
+            p1x = ax + vertices1Dx * 0.5;
+            p1y = ay + vertices1Dy * 0.5;
+            p1z = az + vertices1Dz * 0.5;
+                  
+            p2x = bx + vertices2Dx * 0.5;
+            p2y = by + vertices2Dy * 0.5;
+            p2z = bz + vertices2Dz * 0.5;
+            
+            p3x = cx + vertices3Dx * 0.5;
+            p3y = cy + vertices3Dy * 0.5;
+            p3z = cz + vertices3Dz * 0.5;
+           
+            // EQ5: Append the new positions in combination with the three old positions
+            //      in the right order to the verticesNew array.
+            verticesNew.push(p3x, p3y, p3z);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p1x, p1y, p1z);
+            
+            verticesNew.push(cx, cy, cz);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p3x, p3y, p3z);
+            
+            verticesNew.push(bx, by, bz);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p1x, p1y, p1z);
+            
+            verticesNew.push(ax, ay, az);
+            verticesNew.push(p1x, p1y, p1z);
+            verticesNew.push(p3x, p3y, p3z);
+            
+            // EQ5: Fill the indices array with 12 new values.
+            for(var k = 0; k < 12; ++k) { indicesNew.push(indicesNew.length); }
           }
+          normals = normalsNew;
+          vertices = verticesNew;
+          indices = indicesNew;
         }
         
         splitArrays();
