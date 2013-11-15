@@ -97,6 +97,7 @@
       var subdivisions = 0; // EQ5: Stores the actual number of subdivision.
       var maxSubdivisions = 4; // EQ5: Defines the maximal number of executable subdivisions.
       var sourceModel = "models/bunny.json";
+      //var sourceModel = "models/square_normals.json";
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -299,17 +300,18 @@
             vertices3Dy = ay - cy;
             vertices3Dz = az - cz;
             
-            p1x = ax + vertices1Dx * 0.5;
-            p1y = ay + vertices1Dy * 0.5;
-            p1z = az + vertices1Dz * 0.5;
-                  
-            p2x = bx + vertices2Dx * 0.5;
-            p2y = by + vertices2Dy * 0.5;
-            p2z = bz + vertices2Dz * 0.5;
-            
-            p3x = cx + vertices3Dx * 0.5;
-            p3y = cy + vertices3Dy * 0.5;
-            p3z = cz + vertices3Dz * 0.5;
+            var normalWeight = 0.001;
+            p1x = ax + vertices1Dx * 0.5 + p1x * normalWeight;
+            p1y = ay + vertices1Dy * 0.5 + p1y * normalWeight;
+            p1z = az + vertices1Dz * 0.5 + p1z * normalWeight;
+                                                 
+            p2x = bx + vertices2Dx * 0.5 + p2x * normalWeight;
+            p2y = by + vertices2Dy * 0.5 + p2y * normalWeight;
+            p2z = bz + vertices2Dz * 0.5 + p2z * normalWeight;
+                                                 
+            p3x = cx + vertices3Dx * 0.5 + p3x * normalWeight;
+            p3y = cy + vertices3Dy * 0.5 + p3y * normalWeight;
+            p3z = cz + vertices3Dz * 0.5 + p3z * normalWeight;
            
             // EQ5: Append the new positions in combination with the three old positions
             //      in the right order to the verticesNew array.
@@ -494,7 +496,7 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-04-03 : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
+		<script>displayTitle("Eg06-04-06 : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
 		<p>	
 		</p>
 		<!-- WebGL canvas -->	
