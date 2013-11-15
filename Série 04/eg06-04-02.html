@@ -193,10 +193,10 @@
 					case 83: // 's'
 						rotX += delta;
 						break;
-					case 81: // 'q'
+					case 88: // EQ5: catch 'x' key for the zooom functionaliy
 						distance += 0.1;
 						break;
-					case 69: // 'e'
+					case 89: // EQ5: catch 'y' key for the zooom functionaliy
 						distance -= 0.1;
 						break;
 					default:
@@ -387,19 +387,20 @@
 	<!-- HTML body -->
 	<body onload="initWebGL()">
 		<script>displayTitle("Eg06-04-02 : Visualisation shading de Phong et de Gouraud", 0,1,1,1);</script>
-		<p>	Actions disponibles :
-			<ul>
-				<li>Rotation du lapin : w / a / s / d</li>
-				<li>Zoom avant : q</li>
-				<li>Zoom arrière : e</li>
-				<li>Shading de Phong : p</li>
-				<li>Shading de Gouraud : g</li>
-			</ul>
-		</p>
 		<!-- WebGL canvas -->	
-		<canvas id="webgl-canvas" width="500" height="500">
+		<canvas id="webgl-canvas" width="500" height="500" style="float:left;">
 			HTML5 is not supported
 		</canvas>
+		<div style="float:left;margin-left:25px">
+		<p>Possible interactions:</p>
+			<ul>
+			  <li>Rotation : w / a / s / d</li>
+			  <li>Zoom in: x</li>
+			  <li>Zoom out : y</li>
+			  <li>Phong : p</li>
+			  <li>Gouraud : g</li>
+			</ul>
+		</div>
 	</body>
 
 

@@ -119,10 +119,10 @@
 					case 83: // 's'
 						rotX += delta;
 						break;
-					case 88: // EQ5: catch 'y' key for the zooom functionaliy
+					case 88: // EQ5: catch 'x' key for the zooom functionaliy
 						distance += 0.1;
 						break; 
-					case 89: // EQ5: catch 'x' key for the zooom functionaliy
+					case 89: // EQ5: catch 'y' key for the zooom functionaliy
 						distance -= 0.1;
 						break;
             
@@ -498,11 +498,12 @@
 		<p>	
 		</p>
 		<!-- WebGL canvas -->	
-		<canvas id="webgl-canvas" width="500" height="500">
+		<canvas id="webgl-canvas" width="500" height="500" style="float:left;">
 			HTML5 is not supported
 		</canvas>
     
     <!-- EQ5: Display some cool and informational stuff -->
+	<div style="float:left; margin-left:25px;">
     <div>
       <p><img id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
     </div>
@@ -511,16 +512,19 @@
         <p>Possible interactions:</p>
         <ul>
           <li>Rotation : w / a / s / d</li>
-          <li>Zoom in: y</li>
-          <li>Zoom out : x</li>
+          <li>Zoom in: x</li>
+          <li>Zoom out : y</li>
+		  <li>Increment subdivision : + </li>
+		  <li>Decrement subdivision : - </li>
         </ul>
       </div>
-      <div style="float: left; margin-left:25px;">
+      <div>
         <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
         <p>Vertices count: <span id="verticesCount"></span></p>
         <p>Splitted array count: <span id="splittedArrayCount"></span></p>
       </div>
     </div>
+	</div>
 	</body>
 
 

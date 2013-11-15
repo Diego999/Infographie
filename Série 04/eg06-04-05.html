@@ -120,10 +120,10 @@
 					case 83: // 's'
 						rotX += delta;
 						break;
-					case 88: // EQ5: catch 'y' key for the zooom functionaliy
+					case 88: // EQ5: catch 'x' key for the zooom functionaliy
 						distance += 0.1;
 						break; 
-					case 89: // EQ5: catch 'x' key for the zooom functionaliy
+					case 89: // EQ5: catch 'y' key for the zooom functionaliy
 						distance -= 0.1;
 						break;
             
@@ -496,33 +496,37 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-04-06 : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
+		<script>displayTitle("Eg06-04-05 : Visualisation d'un model en format JSON (Phong shading) avec autre implémentation", 0,1,1,1);</script>
 		<p>	
 		</p>
 		<!-- WebGL canvas -->	
-		<canvas id="webgl-canvas" width="500" height="500">
+		<canvas id="webgl-canvas" width="500" height="500" style="float:left;">
 			HTML5 is not supported
 		</canvas>
     
     <!-- EQ5: Display some cool and informational stuff -->
+	<div style="float: left; margin-left:25px;">
     <div>
       <p><img id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
     </div>
     <div>
-      <div style="float: left;">
+      <div>
         <p>Possible interactions:</p>
         <ul>
           <li>Rotation : w / a / s / d</li>
           <li>Zoom in: y</li>
-          <li>Zoom out : x</li>
+          <li>Zoom out : x</li>	  
+		  <li>Increment subdivision : + </li>
+		  <li>Decrement subdivision : - </li>
         </ul>
       </div>
-      <div style="float: left; margin-left:25px;">
+      <div>
         <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
         <p>Vertices count: <span id="verticesCount"></span></p>
         <p>Splitted array count: <span id="splittedArrayCount"></span></p>
       </div>
     </div>
+	</div>
 	</body>
 
 

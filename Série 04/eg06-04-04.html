@@ -481,9 +481,14 @@
 
 	<!-- HTML body -->
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-04-04 : Subdivision moèdeles divers", 0,1,1,1);</script>
+		<script>displayTitle("Eg06-04-04 : Subdivision modèles divers", 0,1,1,1);</script>
+				<!-- WebGL canvas -->	
+		<canvas id="webgl-canvas" width="500" height="500" style="float:left;">
+			HTML5 is not supported
+		</canvas>
+		<div style="float:left; margin-left:25px">
 		<p>	
-			Modèles : 
+			Model : 
 			<select id="models" onchange="initParameters(this.value)">
 				<option value="models/bunny.json;0;-0.4;-1.3;0;0;0">Bunny</option>
 				<option value="models/Salvador.json;0;-0.3;0;-0.7;0;0">Salvador (Borderlands 2)</option>
@@ -505,14 +510,19 @@
 		</p>
 		<!-- EQ5: Display some cool and informational stuff -->
 		<p><image id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
+		      <div>
+        <p>Possible interactions:</p>
+        <ul>
+          <li>Rotation : w / a / s / d</li>
+          <li>Zoom in: x</li>
+          <li>Zoom out : y</li>	  
+		  <li>Increment subdivision : + </li>
+		  <li>Decrement subdivision : - </li>
+        </ul>
+      </div>
 		<p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span><br />
 		Vertices count: <span id="verticesCount"></span><br />
 		Splitted array count: <span id="splittedArrayCount"></span></p>
-		
-		<!-- WebGL canvas -->	
-		<canvas id="webgl-canvas" width="500" height="500">
-			HTML5 is not supported
-		</canvas>
-    
+		</div>    
     </body>
 </html>
