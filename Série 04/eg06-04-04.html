@@ -1,0 +1,517 @@
+<!doctype html>
+
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		<!-- Definition of style sheet format, especially for the WebGL canevas: -->
+		<link rel="stylesheet" href="css/stylesheet.css">
+
+		<!-- External JavaScript (JS) sources: -->
+		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
+		<script src='js/gl-matrix-min.js'></script>		<!-- Matrix Library -->
+		<script src='js/webglTools.js'></script>		<!-- Basic WebGL initialization tools -->
+
+		<script id="shader-vs" type="x-shader/x-vertex">
+		attribute vec3 aVertexPosition;
+		attribute vec3 aVertexNormal;
+		
+		uniform mat4 uMVMatrix; 
+		uniform mat4 uPMatrix; 
+		uniform mat4 uNMatrix; 
+		
+		uniform vec3 uLightPosition;
+		
+		varying vec3 vNormal;
+		varying vec3 vLightRay;
+		varying vec3 vEyeVec;
+		
+		void main(void) {
+		
+			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);		    
+		    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+		 
+		    vec4 light = vec4(uLightPosition,1.0);	
+		    vLightRay = vertex.xyz - light.xyz;
+		    vEyeVec = -vec3(vertex.xyz);
+		    
+		    gl_Position = uPMatrix * vertex;
+		}
+		</script>
+		
+		<script id="shader-fs" type="x-shader/x-fragment">
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		
+		uniform float uShininess;			// shininess
+		uniform vec3 uLightAmbient;			// ambient color
+		uniform vec3 uMaterialDiffuse;		// diffuse color
+		uniform vec3 uMaterialSpecular;		// specular color
+		
+		varying vec3 vNormal;
+		varying vec3 vLightRay;
+		varying vec3 vEyeVec;
+		
+		void main(void)
+		{
+			vec3 L = normalize(vLightRay);
+			vec3 N = normalize(vNormal);	
+			
+			float lambertTerm = dot(N,-L);
+			
+			vec3 finalColor = uLightAmbient;
+			
+			if(lambertTerm > 0.0)
+			{
+				finalColor += uMaterialDiffuse * lambertTerm;	
+				
+				vec3 E = normalize(vEyeVec);
+				vec3 R = reflect(L, N);
+				float specular = pow( max(dot(R, E), 0.0), uShininess);
+				finalColor += uMaterialSpecular * specular;
+			}
+			
+			gl_FragColor = vec4(finalColor, 1.0);
+		}
+		</script>
+
+		<script>
+			
+			var rotY = 0; //rotation on the Y-axis (in degrees) 
+			var rotX = 0; //rotation on the X-axis (in degrees)
+			var distance = 0; // EQ5: Variable which stores the current distance to the model
+			
+			var tx;
+			var ty;
+			var tz;
+			var sourceModel;
+			
+			initParameters();
+			
+			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var normalsBuffer = null;
+
+			var indices = []; //JavaScript array to store the indices of the polygon
+			  var normals = []; // EQ5: Array stores normals
+			  var vertices = []; // EQ5: Array stores vertices
+			  
+			  var indicesSplitted = []; // EQ5: Indices stored in multiple arrays
+			  var verticesSplitted = []; // EQ5: Vertices stored in multiple arrays
+			  var normalsSplitted = []; // EQ5: Normals stored in multiple arrays
+			  
+			  var subdivisions = 0; // EQ5: Stores the actual number of subdivision.
+			  var maxSubdivisions = 4; // EQ5: Defines the maximal number of executable subdivisions.
+			  var splittedLimit = 6750;
+
+			var mvMatrix = mat4.create(); // The Model-View matrix
+			var pMatrix  = mat4.create(); // The projection matrix
+			var nMatrix  = mat4.create(); // The normal matrix		
+			
+			window.onkeydown = checkKey;
+			var delta = 5;
+			function checkKey(ev){
+				
+				switch(ev.keyCode){
+					case 65: // 'a' 
+						rotY -= delta;
+						break;
+					case 68: // 'd' 
+						rotY += delta;
+						break;
+					case 87: // 'w'
+						rotX -= delta;
+						break; 
+					case 83: // 's'
+						rotX += delta;
+						break;
+					case 88: // EQ5: catch 'y' key for the zooom functionaliy
+						distance += 0.1;
+						break; 
+					case 89: // EQ5: catch 'x' key for the zooom functionaliy
+						distance -= 0.1;
+						break;
+            
+          // EQ5: catch '+' key and increment the number of subdivisions (if valid).
+          case 49: // '+' key (from keyboard)
+          case 107: // '+' key (from num pad)
+            if(subdivisions <= maxSubdivisions)
+            {
+              subdivisions++;
+              loadModel(sourceModel);
+            }
+            break;
+          
+          // EQ5: catch '-' key and decrement the number of subdivisions (if valid).
+          case 173: // '-' key (from keyboard)
+					case 109: // '-' key (from number pad)
+					case 189: // '-' key (from Mac)
+            if(subdivisions > 0)
+            {
+              subdivisions--;
+              loadModel(sourceModel);
+            }
+            break;
+
+					default:
+					  console.log(ev.keyCode); //--- DEBUG LINE ---
+					break;
+				}
+			}
+
+
+			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
+			function initShaderParameters(prg){
+				//The following lines get a reference to the uniforms and attributes defined in the shaders.
+				//This is a necessary step as the shaders are NOT written in JavaScript but in a 
+				//specialized language called GLSL.
+				
+				//--- Information for the Vertex Shader ---
+				// Attribute:
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    
+			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    
+			    // Uniform:
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
+			    
+			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
+			    
+				//--- Information for the Fragment Shader ---
+			    prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			
+			
+
+			////////////////////////////////////////////////
+			////              Model Loader              ////
+			////////////////////////////////////////////////
+			
+			/**
+			* Creates an AJAX request to load a model asynchronously
+			*/
+			
+			function loadModel(filename){
+			    var request = new XMLHttpRequest();
+			    console.info('Requesting ' + filename);
+			    request.open("GET",filename);
+			    
+			    request.onreadystatechange = function() {
+			      if (request.readyState == 4) {
+			        if(request.status == 404) {
+			            console.info(filename + ' does not exist');
+			         }
+			        else {
+			            handleLoadedModel(filename,JSON.parse(request.responseText));
+			        }
+			      }
+			    }
+				          
+          // EQ5: Indicate to user that javascript is executing (heavy processing).
+          setRunning(true);
+			    request.send();
+			}
+			
+			/**
+			* Creates the buffers that contain the geometry of the model
+			*/
+			function handleLoadedModel(filename,payload) {			    
+			    console.info(filename + ' has been retrieved from the server');
+
+        // EQ5: Initializes the arrays to execute the subdivision process.
+        indices = payload.indices;
+        normals = payload.normals;
+        vertices = payload.vertices;
+       
+	    indicesSplitted = [];
+        normalsSplitted = [];
+        verticesSplitted = [];
+		
+        for(var i = 0; i < vertices.length / splittedLimit; ++i)
+        {
+          var lower = i * splittedLimit;
+          var upper = (i + 1) * splittedLimit;
+          
+          verticesSplitted[i] = vertices.slice(lower, upper);
+          normalsSplitted[i] = normals.slice(lower, upper);
+          
+          indicesSplitted[i] = indices.slice(lower / 3, upper / 3);
+          indicesSplitted[i] = indicesSplitted[i].map(function(v){return v - lower/3});
+        }
+        
+        if(subdivisions > 0)
+        { 
+          for(var splittedI = 0; splittedI < verticesSplitted.length; ++splittedI)
+          {
+            for(var j = 1; j <= subdivisions; ++j)
+            { 
+              for(var i = 3; i <= indicesSplitted[splittedI].length; i=i+3)
+              {
+                var iAx = indicesSplitted[splittedI][i-3]*3 + 0;
+                var iAy = indicesSplitted[splittedI][i-3]*3 + 1;
+                var iAz = indicesSplitted[splittedI][i-3]*3 + 2;
+                var iBx = indicesSplitted[splittedI][i-2]*3 + 0;
+                var iBy = indicesSplitted[splittedI][i-2]*3 + 1;
+                var iBz = indicesSplitted[splittedI][i-2]*3 + 2;
+                var iCx = indicesSplitted[splittedI][i-1]*3 + 0;
+                var iCy = indicesSplitted[splittedI][i-1]*3 + 1;
+                var iCz = indicesSplitted[splittedI][i-1]*3 + 2;
+                
+                var n1x = (normalsSplitted[splittedI][iBx] + normalsSplitted[splittedI][iAx]) * 0.5;
+                var n1y = (normalsSplitted[splittedI][iBy] + normalsSplitted[splittedI][iAy]) * 0.5;
+                var n1z = (normalsSplitted[splittedI][iBz] + normalsSplitted[splittedI][iAz]) * 0.5;
+                
+                var n2x = (normalsSplitted[splittedI][iCx] + normalsSplitted[splittedI][iBx]) * 0.5;
+                var n2y = (normalsSplitted[splittedI][iCy] + normalsSplitted[splittedI][iBy]) * 0.5;
+                var n2z = (normalsSplitted[splittedI][iCz] + normalsSplitted[splittedI][iBz]) * 0.5;
+                
+                var n3x = (normalsSplitted[splittedI][iAx] + normalsSplitted[splittedI][iCx]) * 0.5;
+                var n3y = (normalsSplitted[splittedI][iAy] + normalsSplitted[splittedI][iCy]) * 0.5;
+                var n3z = (normalsSplitted[splittedI][iAz] + normalsSplitted[splittedI][iCz]) * 0.5;
+                
+                normalsSplitted[splittedI].push(n1x, n1y, n1z);
+                normalsSplitted[splittedI].push(n2x, n2y, n2z);
+                normalsSplitted[splittedI].push(n3x, n3y, n3z);
+                
+                var vertices1Dy = verticesSplitted[splittedI][iBy] - verticesSplitted[splittedI][iAy];
+                var vertices1Dx = verticesSplitted[splittedI][iBx] - verticesSplitted[splittedI][iAx];
+                var vertices1Dz = verticesSplitted[splittedI][iBz] - verticesSplitted[splittedI][iAz];
+                                            
+                var vertices2Dx = verticesSplitted[splittedI][iCx] - verticesSplitted[splittedI][iBx];
+                var vertices2Dy = verticesSplitted[splittedI][iCy] - verticesSplitted[splittedI][iBy];
+                var vertices2Dz = verticesSplitted[splittedI][iCz] - verticesSplitted[splittedI][iBz];
+                                            
+                var vertices3Dx = verticesSplitted[splittedI][iAx] - verticesSplitted[splittedI][iCx];
+                var vertices3Dy = verticesSplitted[splittedI][iAy] - verticesSplitted[splittedI][iCy];
+                var vertices3Dz = verticesSplitted[splittedI][iAz] - verticesSplitted[splittedI][iCz];
+                
+                var p1x = verticesSplitted[splittedI][iAx] + vertices1Dx * 0.5;
+                var p1y = verticesSplitted[splittedI][iAy] + vertices1Dy * 0.5;
+                var p1z = verticesSplitted[splittedI][iAz] + vertices1Dz * 0.5;
+                
+                var p2x = verticesSplitted[splittedI][iBx] + vertices2Dx * 0.5;
+                var p2y = verticesSplitted[splittedI][iBy] + vertices2Dy * 0.5;
+                var p2z = verticesSplitted[splittedI][iBz] + vertices2Dz * 0.5;
+                
+                var p3x = verticesSplitted[splittedI][iCx] + vertices3Dx * 0.5;
+                var p3y = verticesSplitted[splittedI][iCy] + vertices3Dy * 0.5;
+                var p3z = verticesSplitted[splittedI][iCz] + vertices3Dz * 0.5;
+                
+                verticesSplitted[splittedI].push(p1x, p1y, p1z);
+                verticesSplitted[splittedI].push(p2x, p2y, p2z);
+                verticesSplitted[splittedI].push(p3x, p3y, p3z);
+                
+                var last = verticesSplitted[splittedI].length/3 - 4;
+                var  iP1 = last + 1;
+                var  iP2 = last + 2;
+                var  iP3 = last + 3;
+                indicesSplitted[splittedI].splice(i-2, 0, iP1, iP3);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-1, 0, iP1, iP2);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-0, 0, iP2, iP3);
+                i += 2;
+                indicesSplitted[splittedI].splice(i-0, 0, iP1, iP2, iP3);
+                i += 3;
+              }
+            }
+          }
+        }
+        
+        // Init lights
+				initLights();
+        
+        udpateInformations();
+        
+        setRunning(false);
+      }
+   
+			
+			function initParameters(value)
+			{
+				if(value !== undefined)
+				{
+					tab = value.split(";");
+					sourceModel = tab[0];
+					tx = parseFloat(tab[1]);
+					ty = parseFloat(tab[2]);
+					tz = parseFloat(tab[3]);
+					distance = parseFloat(tab[4]);
+					rotX = parseFloat(tab[5]);
+					rotY = parseFloat(tab[6]);
+					
+					subdivisions = 0;
+					loadModel(sourceModel);
+					udpateInformations();
+				}
+				else
+				{
+					tx = 0;
+					ty = -0.4;
+					tz = -1.3;
+					distance = 0;
+					sourceModel = "models/bunny.json";
+				}
+			}
+			
+			// Utility function to convert degrees to radians
+			function degToRad(degrees){
+				return( degrees * Math.PI / 180.0 );
+			}
+
+			// Initializes light position and colors
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+			    glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.5,0.5,0.5);	
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6,0.6,0.6);
+			    glContext.uniform1f(prg.shininessUniform, 24.0);
+			}
+			/*
+			
+			* Draws the scene
+			*/
+			function drawScene(){
+				//light grey background
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
+				
+				//activate z-buffer
+				glContext.enable(glContext.DEPTH_TEST);
+				
+				//resets color and depth buffer before drawing
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				//defines viewport dimensions based on the webgl canvas size
+				glContext.viewport(0, 0, c_width, c_height);
+				
+			    mat4.perspective(60, c_width / c_height, 0.01, 100.0, pMatrix);
+				mat4.identity(mvMatrix);
+				
+				//Positions de object in the center of the scene 
+				
+        // EQ5: appended the zoom distance to the Z value.
+				mat4.translate(mvMatrix, [tx, ty, tz + distance]); 
+			    //this example applies a rotation on the X and Y axes
+			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
+			    mat4.rotate(mvMatrix, degToRad(rotX), [1, 0, 0]);
+			    
+				//send the projection and model view matrices to the vertex shader
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);	
+
+				//calculate and send the normal matrix for shading calculation			    	
+			    mat4.set(mvMatrix, nMatrix);
+			    mat4.inverse(nMatrix);
+			    mat4.transpose(nMatrix);
+			    
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+
+        // EQ5: bind and display each of the splitted array vertices, normals and indices sets 
+        for(var i = 0; i < indicesSplitted.length; i++)
+        {
+          // EQ5: Reinitialize each time the buffers.
+          vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
+          indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
+          normalsBuffer = getVertexBufferWithVertices(normalsSplitted[i]);
+          
+          //1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
+          //   then ask Vertex Shader to draw triangles between vertices(1.4)
+          //1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+          glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.2 Send the array of Vertex Normals for shading calculation
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+          glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+          glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                  
+          //1.4 Draw as triangles
+          glContext.drawElements(glContext.TRIANGLES, indicesSplitted[i].length, glContext.UNSIGNED_SHORT,0);
+        }
+			}
+			
+			/*******************************************************************************
+				Starting point!! 
+				Initializes webgl, shaders, buffers and starts rendering loop
+			********************************************************************************/
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				//Initializes the program (shaders).
+				initProgram();
+				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
+				//(vertex buffer, color and index buffer)
+				loadModel(sourceModel);
+       
+        // Starts rendering loop, calls drawScene
+        renderLoop();
+        
+        // EQ5: Show some information to the user. 
+        udpateInformations();
+			}
+      
+      // EQ5: Method actualizes the information on the html user interface.
+      function udpateInformations()
+      {
+        document.getElementById("numberOfSubdivisions").innerHTML = subdivisions;
+        document.getElementById("maxSubdivisions").innerHTML = maxSubdivisions;
+        document.getElementById("verticesCount").innerHTML = indices.length;
+        document.getElementById("splittedArrayCount").innerHTML = normalsSplitted.length;
+      }
+
+      // EQ5: Allows indicating the process execution staten(running or not) to the user
+      //      Displays or hides an image.
+      function setRunning(running)
+      {
+        document.getElementById("running").style.visibility = (running ? 'visible' : 'hidden');
+      }
+	  
+		</script>
+
+	</head>
+
+	<!-- HTML body -->
+	<body onload="initWebGL()">
+		<script>displayTitle("Eg06-04-04 : Subdivision moèdeles divers", 0,1,1,1);</script>
+		<p>	
+			Modèles : 
+			<select id="models" onchange="initParameters(this.value)">
+				<option value="models/bunny.json;0;-0.4;-1.3;0;0;0">Bunny</option>
+				<option value="models/Salvador.json;0;-0.5;0;-1;-90;0">Salvador (Borderlands 2)</option>
+				<option value="models/ToyPlane.json;0;0;0;0;0;0">ToyPlane</option>
+				<option value="models/MrHumpty.json;0;0;0;0;0;0">Mr. Humpty</option>
+				<option value="models/crane.json;0;0;0;0;0;0">Origami</option>
+				<option value="models/King.json;0;0;0;0;0;0">Roi - échiquier</option>
+				<option value="models/piggy.json;0;0;0;0;0;0">Tirelire</option>
+				<option value="models/luigi textured obj.json;0;0;0;0;0;0">Luigi</option>
+				<option value="models/minion for upload.json;0;0;0;0;0;0">Minion (moi moche et méchant)</option>
+				<option value="models/IronMan.json;0;0;0;0;0;0">Ironman</option>
+				<option value="models/VMask.json;0;0;0;0;0;0">Anonymous masque</option>
+				<option value="models/SCAR H.json;0;0;0;0;0;0">SCAR H</option>
+				<option value="models/Capitan America.json;0;0;0;0;0;0">Cpt America</option>
+				<option value="models/Capitan America shield.json;0;0;0;0;0;0">Cpt America bouclier</option>
+				<option value="models/patrick.json;0;0;0;0;0;0">Patrick (bob l'éponge)</option>
+				<option value="models/ita.json;0;0;0;0;0;0">itachi (naruto)</option>
+			</select>
+		</p>
+		<!-- WebGL canvas -->	
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+    
+    <!-- EQ5: Display some cool and informational stuff -->
+    <p><image id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
+    <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
+    <p>Vertices count: <span id="verticesCount"></span></p>
+    <p>Splitted array count: <span id="splittedArrayCount"></span></p>
+	</body>
+</html>
