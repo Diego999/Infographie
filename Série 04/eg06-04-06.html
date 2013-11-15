@@ -1,0 +1,529 @@
+<!doctype html>
+
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		<!-- Definition of style sheet format, especially for the WebGL canevas: -->
+		<link rel="stylesheet" href="css/stylesheet.css" />
+
+		<!-- External JavaScript (JS) sources: -->
+		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
+		<script src='js/gl-matrix-min.js'></script>		<!-- Matrix Library -->
+		<script src='js/webglTools.js'></script>		<!-- Basic WebGL initialization tools -->
+
+		<script id="shader-vs" type="x-shader/x-vertex">
+		attribute vec3 aVertexPosition;
+		attribute vec3 aVertexNormal;
+		
+		uniform mat4 uMVMatrix; 
+		uniform mat4 uPMatrix; 
+		uniform mat4 uNMatrix; 
+		
+		uniform vec3 uLightPosition;
+		
+		varying vec3 vNormal;
+		varying vec3 vLightRay;
+		varying vec3 vEyeVec;
+		
+		void main(void) {
+		
+			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);		    
+		    vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
+		 
+		    vec4 light = vec4(uLightPosition,1.0);	
+		    vLightRay = vertex.xyz - light.xyz;
+		    vEyeVec = -vec3(vertex.xyz);
+		    
+		    gl_Position = uPMatrix * vertex;
+		}
+		</script>
+		
+		<script id="shader-fs" type="x-shader/x-fragment">
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		
+		uniform float uShininess;			// shininess
+		uniform vec3 uLightAmbient;			// ambient color
+		uniform vec3 uMaterialDiffuse;		// diffuse color
+		uniform vec3 uMaterialSpecular;		// specular color
+		
+		varying vec3 vNormal;
+		varying vec3 vLightRay;
+		varying vec3 vEyeVec;
+		
+		void main(void)
+		{
+			vec3 L = normalize(vLightRay);
+			vec3 N = normalize(vNormal);	
+			
+			float lambertTerm = dot(N,-L);
+			
+			vec3 finalColor = uLightAmbient;
+			
+			if(lambertTerm > 0.0)
+			{
+				finalColor += uMaterialDiffuse * lambertTerm;	
+				
+				vec3 E = normalize(vEyeVec);
+				vec3 R = reflect(L, N);
+				float specular = pow( max(dot(R, E), 0.0), uShininess);
+				finalColor += uMaterialSpecular * specular;
+			}
+			
+			gl_FragColor = vec4(finalColor, 1.0);
+		}
+		</script>
+
+		<script>
+			
+			var rotY = 0; //rotation on the Y-axis (in degrees) 
+			var rotX = 0; //rotation on the X-axis (in degrees)
+      var distance = 0; // EQ5: Variable which stores the current distance to the model
+			
+			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
+			var vertexBuffer = null;
+			var indexBuffer = null;
+			var normalsBuffer = null;
+
+			var indices = []; //JavaScript array to store the indices of the polygon
+      var normals = []; // EQ5: Array stores normals
+      var vertices = []; // EQ5: Array stores vertices
+      
+      var indicesSplitted = []; // EQ5: Indices stored in multiple arrays
+      var verticesSplitted = []; // EQ5: Vertices stored in multiple arrays
+      var normalsSplitted = []; // EQ5: Normals stored in multiple arrays
+      
+      var subdivisions = 0; // EQ5: Stores the actual number of subdivision.
+      var maxSubdivisions = 4; // EQ5: Defines the maximal number of executable subdivisions.
+      var sourceModel = "models/bunny.json";
+
+			var mvMatrix = mat4.create(); // The Model-View matrix
+			var pMatrix  = mat4.create(); // The projection matrix
+			var nMatrix  = mat4.create(); // The normal matrix		
+			
+			window.onkeydown = checkKey;
+			var delta = 5;
+			function checkKey(ev){
+				
+				switch(ev.keyCode){
+					case 65: // 'a' 
+						rotY -= delta;
+						break;
+					case 68: // 'd' 
+						rotY += delta;
+						break;
+					case 87: // 'w'
+						rotX -= delta;
+						break; 
+					case 83: // 's'
+						rotX += delta;
+						break;
+					case 88: // EQ5: catch 'y' key for the zooom functionaliy
+						distance += 0.1;
+						break; 
+					case 89: // EQ5: catch 'x' key for the zooom functionaliy
+						distance -= 0.1;
+						break;
+            
+          // EQ5: catch '+' key and increment the number of subdivisions (if valid).
+          case 49: // '+' key (from keyboard)
+          case 107: // '+' key (from num pad)
+            if(subdivisions <= maxSubdivisions)
+            {
+              subdivisions++;
+              loadModel(sourceModel);
+            }
+            break;
+          
+          // EQ5: catch '-' key and decrement the number of subdivisions (if valid).
+          case 173: // '-' key (from keyboard)
+					case 109: // '-' key (from number pad)
+					case 189: // '-' key (from Mac)
+            if(subdivisions > 0)
+            {
+              subdivisions--;
+              loadModel(sourceModel);
+            }
+            break;
+
+					default:
+					  console.log(ev.keyCode); //--- DEBUG LINE ---
+					break;
+				}
+			}
+
+
+			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
+			function initShaderParameters(prg){
+				//The following lines get a reference to the uniforms and attributes defined in the shaders.
+				//This is a necessary step as the shaders are NOT written in JavaScript but in a 
+				//specialized language called GLSL.
+				
+				//--- Information for the Vertex Shader ---
+				// Attribute:
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    
+			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
+			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
+			    
+			    // Uniform:
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
+			    
+			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
+			    
+				//--- Information for the Fragment Shader ---
+			    prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
+			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
+			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
+			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			
+			
+
+			////////////////////////////////////////////////
+			////              Model Loader              ////
+			////////////////////////////////////////////////
+			
+			/**
+			* Creates an AJAX request to load a model asynchronously
+			*/
+			
+			function loadModel(filename){
+			    var request = new XMLHttpRequest();
+			    console.info('Requesting ' + filename);
+			    request.open("GET",filename);
+			    
+			    request.onreadystatechange = function() {
+			      if (request.readyState == 4) {
+			        if(request.status == 404) {
+			            console.info(filename + ' does not exist');
+			         }
+			        else {
+			            handleLoadedModel(filename,JSON.parse(request.responseText));
+			        }
+			      }
+			    }
+          
+          // EQ5: Indicate to user that javascript is executing (heavy processing).
+          setRunning(true);
+			    request.send();
+			}
+			
+			/**
+			* Creates the buffers that contain the geometry of the model
+			*/
+			function handleLoadedModel(filename,payload) {			    
+			    console.info(filename + ' has been retrieved from the server');
+
+        // EQ5: Initializes the arrays to execute the subdivision process.
+        indices = payload.indices;
+        normals = payload.normals;
+        vertices = payload.vertices;
+       
+        // EQ5: Execute the 'subdivions' times the subdvision process.
+        for(var j = 0; j < subdivisions; ++j)
+        {
+          var normalsNew = [];
+          var verticesNew = [];
+          var indicesNew = [];
+          
+          // EQ5: Subdivise each triangle in 4 new subtriangles.
+          for(var i = vertices.length; i >= 9; i=i-9)
+          {
+            ax = normals[i-9];
+            ay = normals[i-8];
+            az = normals[i-7];
+            bx = normals[i-6];
+            by = normals[i-5];
+            bz = normals[i-4];
+            cx = normals[i-3];
+            cy = normals[i-2];
+            cz = normals[i-1];
+           
+            // EQ5: Calculate the new normal vectors for the three new points
+            p1x = (bx + ax) * 0.5;
+            p1y = (by + ay) * 0.5;
+            p1z = (bz + az) * 0.5;
+            
+            p2x = (cx + bx) * 0.5;
+            p2y = (cy + by) * 0.5;
+            p2z = (cz + bz) * 0.5;
+            
+            p3x = (ax + cx) * 0.5;
+            p3y = (ay + cy) * 0.5;
+            p3z = (az + cz) * 0.5;
+            
+            // EQ5: Append the normal vectors for the 4 triangles
+            normalsNew.push(p3x, p3y, p3z);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p1x, p1y, p1z);
+
+            normalsNew.push(cx, cy, cz);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p3x, p3y, p3z);
+            
+            normalsNew.push(bx, by, bz);
+            normalsNew.push(p2x, p2y, p2z);
+            normalsNew.push(p1x, p1y, p1z);
+            
+            normalsNew.push(ax, ay, az);
+            normalsNew.push(p1x, p1y, p1z);
+            normalsNew.push(p3x, p3y, p3z);
+            
+            
+            
+            ax = vertices[i-9];
+            ay = vertices[i-8];
+            az = vertices[i-7];
+            bx = vertices[i-6];
+            by = vertices[i-5];
+            bz = vertices[i-4];
+            cx = vertices[i-3];
+            cy = vertices[i-2];
+            cz = vertices[i-1];
+            
+            // EQ5: Calculate the three intermediate positions
+            vertices1Dx = bx - ax;
+            vertices1Dy = by - ay;
+            vertices1Dz = bz - az;
+            
+            vertices2Dx = cx - bx;
+            vertices2Dy = cy - by;
+            vertices2Dz = cz - bz;
+            
+            vertices3Dx = ax - cx;
+            vertices3Dy = ay - cy;
+            vertices3Dz = az - cz;
+            
+            p1x = ax + vertices1Dx * 0.5;
+            p1y = ay + vertices1Dy * 0.5;
+            p1z = az + vertices1Dz * 0.5;
+                  
+            p2x = bx + vertices2Dx * 0.5;
+            p2y = by + vertices2Dy * 0.5;
+            p2z = bz + vertices2Dz * 0.5;
+            
+            p3x = cx + vertices3Dx * 0.5;
+            p3y = cy + vertices3Dy * 0.5;
+            p3z = cz + vertices3Dz * 0.5;
+           
+            // EQ5: Append the new positions in combination with the three old positions
+            //      in the right order to the verticesNew array.
+            verticesNew.push(p3x, p3y, p3z);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p1x, p1y, p1z);
+            
+            verticesNew.push(cx, cy, cz);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p3x, p3y, p3z);
+            
+            verticesNew.push(bx, by, bz);
+            verticesNew.push(p2x, p2y, p2z);
+            verticesNew.push(p1x, p1y, p1z);
+            
+            verticesNew.push(ax, ay, az);
+            verticesNew.push(p1x, p1y, p1z);
+            verticesNew.push(p3x, p3y, p3z);
+            
+            // EQ5: Fill the indices array with 12 new values.
+            for(var k = 0; k < 12; ++k) { indicesNew.push(indicesNew.length); }
+          }
+          normals = normalsNew;
+          vertices = verticesNew;
+          indices = indicesNew;
+        }
+        
+        splitArrays();
+        
+        // Init lights
+				initLights();
+        
+        udpateInformations();
+        
+        setRunning(false);
+      }
+      
+      // EQ5: Function allows split the arrays indices, colors and vertices
+      //      in sub arrays.
+      function splitArrays(){
+        indicesSplitted = [];
+        verticesSplitted = [];
+        normalsSplitted = [];
+        
+        var i = 1;
+        var MAXELEMENT = 64500; // Has to be a multiple of 3
+        while( (i-1)*MAXELEMENT < indices.length)
+        {
+          splitted = indices.slice((i-1)*MAXELEMENT, i*MAXELEMENT);
+          // EQ5: The indices values have to be corrected.
+          //      Without this correction the indices are to high and out of
+          //      range of colors and vertexes arrays.
+          splitted = splitted.map(function(v){return v - (i-1)*MAXELEMENT; });
+          
+          indicesSplitted.push(splitted);
+          verticesSplitted.push(vertices.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
+          normalsSplitted.push(normals.slice((i-1)*MAXELEMENT*3, i*MAXELEMENT*3));
+          
+          i++;
+        }
+      }
+			
+			// Utility function to convert degrees to radians
+			function degToRad(degrees){
+				return( degrees * Math.PI / 180.0 );
+			}
+
+			// Initializes light position and colors
+			function initLights(){
+			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+			    glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.5,0.5,0.5);	
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6,0.6,0.6);
+			    glContext.uniform1f(prg.shininessUniform, 24.0);
+			}
+			/*
+			
+			* Draws the scene
+			*/
+			function drawScene(){
+				//light grey background
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
+				
+				//activate z-buffer
+				glContext.enable(glContext.DEPTH_TEST);
+				
+				//resets color and depth buffer before drawing
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				//defines viewport dimensions based on the webgl canvas size
+				glContext.viewport(0, 0, c_width, c_height);
+				
+			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
+				mat4.identity(mvMatrix);
+				
+				//Positions de object in the center of the scene 
+
+			    var tx = 0;
+			    var ty = -0.4;
+				var tz = -1.3;
+				
+        // EQ5: appended the zoom distance to the Z value.
+				mat4.translate(mvMatrix, [tx, ty, tz + distance]); 
+			    //this example applies a rotation on the X and Y axes
+			    mat4.rotate(mvMatrix, degToRad(rotY), [0, 1, 0]);
+			    mat4.rotate(mvMatrix, degToRad(rotX), [1, 0, 0]);
+			    
+				//send the projection and model view matrices to the vertex shader
+			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);	
+
+				//calculate and send the normal matrix for shading calculation			    	
+			    mat4.set(mvMatrix, nMatrix);
+			    mat4.inverse(nMatrix);
+			    mat4.transpose(nMatrix);
+			    
+			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);
+
+        // EQ5: bind and display each of the splitted array vertices, normals and indices sets 
+        for(var i = 0; i < indicesSplitted.length; i++)
+        {
+          // EQ5: Reinitialize each time the buffers.
+          vertexBuffer = getVertexBufferWithVertices(verticesSplitted[i]);
+          indexBuffer = getIndexBufferWithIndices(indicesSplitted[i]);
+          normalsBuffer = getVertexBufferWithVertices(normalsSplitted[i]);
+          
+          //1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
+          //   then ask Vertex Shader to draw triangles between vertices(1.4)
+          //1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
+          glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.2 Send the array of Vertex Normals for shading calculation
+          glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
+          glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+  
+          //1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+          glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                  
+          //1.4 Draw as triangles
+          glContext.drawElements(glContext.TRIANGLES, indicesSplitted[i].length, glContext.UNSIGNED_SHORT,0);
+        }
+			}
+			
+			/*******************************************************************************
+				Starting point!! 
+				Initializes webgl, shaders, buffers and starts rendering loop
+			********************************************************************************/
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				//Initializes the program (shaders).
+				initProgram();
+				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
+				//(vertex buffer, color and index buffer)
+				loadModel(sourceModel);
+       
+        // Starts rendering loop, calls drawScene
+        renderLoop();
+        
+        // EQ5: Show some information to the user. 
+        udpateInformations();
+			}
+      
+      // EQ5: Method actualizes the information on the html user interface.
+      function udpateInformations()
+      {
+        document.getElementById("numberOfSubdivisions").innerHTML = subdivisions;
+        document.getElementById("maxSubdivisions").innerHTML = maxSubdivisions;
+        document.getElementById("verticesCount").innerHTML = indices.length;
+        document.getElementById("splittedArrayCount").innerHTML = normalsSplitted.length;
+      }
+
+      // EQ5: Allows indicating the process execution staten(running or not) to the user
+      //      Displays or hides an image.
+      function setRunning(running)
+      {
+        document.getElementById("running").style.visibility = (running ? 'visible' : 'hidden');
+      }
+		</script>
+
+	</head>
+
+	<!-- HTML body -->
+	<body onload="initWebGL()">
+		<script>displayTitle("Eg06-04-03 : Visualisation d'un model en format JSON (Phong shading)", 0,1,1,1);</script>
+		<p>	
+		</p>
+		<!-- WebGL canvas -->	
+		<canvas id="webgl-canvas" width="500" height="500">
+			HTML5 is not supported
+		</canvas>
+    
+    <!-- EQ5: Display some cool and informational stuff -->
+    <div>
+      <p><img id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
+    </div>
+    <div>
+      <div style="float: left;">
+        <p>Possible interactions:</p>
+        <ul>
+          <li>Rotation : w / a / s / d</li>
+          <li>Zoom in: y</li>
+          <li>Zoom out : x</li>
+        </ul>
+      </div>
+      <div style="float: left; margin-left:25px;">
+        <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
+        <p>Vertices count: <span id="verticesCount"></span></p>
+        <p>Splitted array count: <span id="splittedArrayCount"></span></p>
+      </div>
+    </div>
+	</body>
+
+
+
+
+</html>
