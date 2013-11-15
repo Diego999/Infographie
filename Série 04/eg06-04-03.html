@@ -4,7 +4,7 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 		<!-- Definition of style sheet format, especially for the WebGL canevas: -->
-		<link rel="stylesheet" href="css/stylesheet.css">
+		<link rel="stylesheet" href="css/stylesheet.css" />
 
 		<!-- External JavaScript (JS) sources: -->
 		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
@@ -503,10 +503,24 @@
 		</canvas>
     
     <!-- EQ5: Display some cool and informational stuff -->
-    <p><image id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
-    <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
-    <p>Vertices count: <span id="verticesCount"></span></p>
-    <p>Splitted array count: <span id="splittedArrayCount"></span></p>
+    <div>
+      <p><img id="running" alt="running" src="loading.gif" style="visibility: hidden"/></p>
+    </div>
+    <div>
+      <div style="float: left;">
+        <p>Possible interactions:</p>
+        <ul>
+          <li>Rotation : w / a / s / d</li>
+          <li>Zoom in: y</li>
+          <li>Zoom out : x</li>
+        </ul>
+      </div>
+      <div style="float: left; margin-left:25px;">
+        <p>Subdivision count (max: <span id="maxSubdivisions"></span>): <span id="numberOfSubdivisions"></span></p>
+        <p>Vertices count: <span id="verticesCount"></span></p>
+        <p>Splitted array count: <span id="splittedArrayCount"></span></p>
+      </div>
+    </div>
 	</body>
 
 
