@@ -129,7 +129,7 @@
           // EQ5: catch '+' key and increment the number of subdivisions (if valid).
           case 49: // '+' key (from keyboard)
           case 107: // '+' key (from num pad)
-            if(subdivisions <= maxSubdivisions)
+            if(subdivisions < maxSubdivisions)
             {
               subdivisions++;
               loadModel(sourceModel);

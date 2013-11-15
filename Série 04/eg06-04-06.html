@@ -210,7 +210,7 @@
           // EQ5: catch '+' key and increment the number of subdivisions (if valid).
           case 49: // '+' key (from keyboard)
           case 107: // '+' key (from num pad)
-            if(subdivisions <= maxSubdivisions)
+            if(subdivisions < maxSubdivisions)
             {
               subdivisions++;
               loadModel(sourceModel);
@@ -603,13 +603,14 @@
 		  <div>
 			<p>
 				We can see that with this approach, more vertices we have, less differences between Phong and Gouraud there is !<br />
-				For example, a difference we could see with subdivision 4 is the shadown the legs and the flank of the bunny.
+				For example, a difference we could see with subdivision 4 is the shadow the legs and the flank of the bunny.<br />
+				To summarize, more polygon we have, better we should use the Gouraud shading. It's faster and the difference between Gouraud and Phong Shading will be minor. 
 			</p>
 			<p>Possible interactions:</p>
 			<ul>
 			  <li>Rotation : w / a / s / d</li>
-			  <li>Zoom in: y</li>
-			  <li>Zoom out : x</li>
+			  <li>Zoom in: x</li>
+			  <li>Zoom out : y</li>
 			  <li>Phong : p</li>
 			  <li>Gouraud : g</li>
 			  <li>Increment subdivision : + </li>

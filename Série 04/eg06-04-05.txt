@@ -1,14 +1,6 @@
-Pour pouvoir générer un modèle de surfaces de subdivision on peut utiliser il faut déplacer les nouveaux points intermédiaire. La direction de cette déplacement est selon la direction de la normal à ce point.
+Une solution que l'on propose est de prendre le voisin d'un vertice. Si nous avons 2 vertices tels que :
+x----------x nous calculons un vertice intermédiaire x-----x-----x puis sa normale (moyenne des normales des vertices gauche/droite). Pour finir, on change la position du vertice intermédiaire, précédemment calculé, en pondérant la longueur de la normale avec un facteur. 
 
+Cette solution marche si nous avons des formes n'ayant pas de surfaces plates. Par exemple, si on prend un cube, cela ne marchera pas, car selon le facteur, la déformation peut être conséquente.
 
-\              |                /
- \            |              /
-  \           |           /
-   \_________|_________/
-   
-   
-                |
-\             |                 /
- \            |              /
-  \      ____|____        /
-   \__---         ---__/
+Pour plus de détails, se référer au fichier eg06-04-05.html.
