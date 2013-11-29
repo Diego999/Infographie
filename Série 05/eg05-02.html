@@ -25,6 +25,7 @@
 			uniform mat4 uNMatrix;
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
+			
 			uniform vec3 uLightPosition;
 			
 			varying vec2 vTextureCoord;
@@ -61,10 +62,18 @@
 			uniform bool usingNormalMapLeft;
 			uniform bool usingSpecularMapLeft;			
 			
+			uniform bool usingColorMapRight;
+			uniform bool usingNormalMapRight;
+			uniform bool usingSpecularMapRight;	
+			
 			uniform sampler2D uColorTextureLeft;
 			uniform sampler2D uNormalMapLeft;
 			uniform sampler2D uSpecularMapLeft;
 
+			uniform sampler2D uColorTextureRight;
+			uniform sampler2D uNormalMapRight;
+			uniform sampler2D uSpecularMapRight;
+			
 			varying vec2 vTextureCoord;
 							
 			varying vec3 vNormal;
@@ -77,49 +86,79 @@
 
 				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
 				
-				vec3 baseColor;
-				vec3 normalVector;
-				vec3 specVector ;
+				vec3 baseColorLeft;
+				vec3 normalVectorLeft;
+				vec3 specVectorLeft;
+				
+				vec3 baseColorRight;
+				vec3 normalVectorRight;
+				vec3 specVectorRight;
 				
 				vec3 finalColor = uLightAmbient;
 
-				if( usingColorMapLeft ) baseColor = vec3(texture2D(uColorTextureLeft, mapCoord));             // the natural material color
-				else baseColor = vec3(0.5, 0.5, 0.5); // middle grey
+				if( usingColorMapLeft ) baseColorLeft = vec3(texture2D(uColorTextureLeft, mapCoord));             // the natural material color
+				else baseColorLeft = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapLeft ) normalVector = normalize(vec3(texture2D(uNormalMapLeft, mapCoord))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
-				else normalVector = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
+				if( usingNormalMapLeft ) normalVectorLeft = normalize(vec3(texture2D(uNormalMapLeft, mapCoord))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				else normalVectorLeft = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
 				
-				if( usingSpecularMapLeft ) specVector = vec3(texture2D(uSpecularMapLeft, mapCoord));          // the specular effect
-				else specVector = vec3( 0.0, 0.0, 0.0 ); // no specular
+				if( usingSpecularMapLeft ) specVectorLeft = vec3(texture2D(uSpecularMapLeft, mapCoord));          // the specular effect
+				else specVectorLeft = vec3( 0.0, 0.0, 0.0 ); // no specular
+												
+				if( usingColorMapRight ) baseColorRight = vec3(texture2D(uColorTextureRight, mapCoord));             // the natural material color
+				else baseColorRight = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapLeft || usingSpecularMapLeft ){
-					N *= normalVector;
-					N = normalize(N);
+				if( usingNormalMapRight ) normalVectorRight = normalize(vec3(texture2D(uNormalMapRight, mapCoord))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				else normalVectorRight = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
+				
+				if( usingSpecularMapRight ) specVectorRight = vec3(texture2D(uSpecularMapRight, mapCoord));          // the specular effect
+				else specVectorRight = vec3( 0.0, 0.0, 0.0 ); // no specular
+				
+				if(usingNormalMapLeft || usingSpecularMapLeft || usingNormalMapRight || usingSpecularMapRight){
+					vec3 NRight = N;
+					NRight *= normalVectorRight;
+					NRight = normalize(NRight);
 					
-					float lambertTerm = dot(N,-L);
+					vec3 NLeft = N;
+					NLeft *= normalVectorLeft;
+					NLeft = normalize(NLeft);
+					
+					float lambertTermLeft = dot(NRight,-L);
+					float lambertTermRight = dot(NRight,-L);
 				
 					float specular = 0.0;
 					
-					if(lambertTerm > 0.0)
-					{
-						finalColor +=  uMaterialDiffuse * lambertTerm;	
-						
+					if(lambertTermLeft > 0.0 || lambertTermRight > 0.0)
+					{						
 						vec3 E = normalize(vEyeVec);
-						vec3 R = reflect(L, N);
-						specular = pow( max(dot(R, E), 0.0), uShininess);
-						finalColor += specVector * uMaterialSpecular * specular;
+						float specularLeft = pow( max(dot(reflect(L, NLeft), E), 0.0), uShininess);
+						float specularRight = pow( max(dot(reflect(L, NRight), E), 0.0), uShininess);
+						
+						vec3 specular = uMaterialSpecular;
+						vec3 diffuse = uMaterialDiffuse;
+						
+						if(lambertTermLeft > 0.0 && lambertTermRight > 0.0)
+						{
+							diffuse *= (lambertTermLeft + lambertTermRight)/2.0;
+							specular *= (specVectorLeft + specVectorRight)/2.0 * (specularLeft + specularRight)/2.0;
+						}
+						else if(lambertTermLeft > 0.0)
+						{
+							diffuse *= lambertTermLeft;
+							specular *= specVectorLeft * specularLeft;
+						}
+						else
+						{
+							diffuse *= lambertTermRight;
+							specular *= specVectorRight * specularRight;
+						}
+						finalColor += diffuse;	
+						finalColor += specular;
 					}
 				}
 				
-				finalColor *= baseColor.xyz;
+				finalColor *= (baseColorLeft.xyz + baseColorRight.xyz)/2.0;
 				
-				/*finalColor = vec3( 0.0, 0.0, 0.0 );
-				if( usingColorMap ) finalColor.x = 1.0;
-				if( usingNormalMap ) finalColor.y = 1.0;
-				if( usingSpecularMap ) finalColor.z = 1.0;
-				*/
-				
-				//finalColor = specVector*specular*uMaterialSpecular;
 				gl_FragColor = vec4(finalColor, 1.0);
 			}
 		</script>
@@ -128,6 +167,10 @@
 			var currentColorMapIDLeft    = 1;
 			var currentNormalMapIDLeft   = 1;
 			var currentSpecularMapIDLeft = 1;
+			
+			var currentColorMapIDRight    = 1;
+			var currentNormalMapIDRight   = 1;
+			var currentSpecularMapIDRight = 1;
 			
 			const M_PI = 3.1415926535897932384626433832795;
 			const M_2PI = 2.0*M_PI;
@@ -188,28 +231,80 @@
 				prg.usingNormalMapUniformLeft   = glContext.getUniformLocation(prg, 'usingNormalMapLeft');
 				prg.usingSpecularMapUniformLeft = glContext.getUniformLocation(prg, 'usingSpecularMapLeft');
 				
+				prg.usingColorMapUniformRight    = glContext.getUniformLocation(prg, 'usingColorMapRight');
+				prg.usingNormalMapUniformRight   = glContext.getUniformLocation(prg, 'usingNormalMapRight');
+				prg.usingSpecularMapUniformRight = glContext.getUniformLocation(prg, 'usingSpecularMapRight');
+				
 				prg.uColorTextureLeft 			= glContext.getUniformLocation(prg, "uColorTextureLeft");
 				prg.uNormalMapLeft   			= glContext.getUniformLocation(prg, "uNormalMapLeft");
 				prg.uSpecularMapLeft   			= glContext.getUniformLocation(prg, "uSpecularMapLeft");
+				
+				prg.uColorTextureRight 			= glContext.getUniformLocation(prg, "uColorTextureRight");
+				prg.uNormalMapRight   			= glContext.getUniformLocation(prg, "uNormalMapRight");
+				prg.uSpecularMapRight   			= glContext.getUniformLocation(prg, "uSpecularMapRight");
 			}
 
 			function initBuffers(){
-				vertices = [ -1.0, -1.0, 0.0,
-							  1.0, -1.0, 0.0,
-							 -1.0,  1.0, 0.0,
-							  1.0,  1.0, 0.0 ];
+				vertices = [ -1.0, -1.0, -1.0,
+								  1.0, -1.0, -1.0,
+								 -1.0,  1.0, -1.0,
+								  1.0,  1.0, -1.0, 
+								  -1.0, -1.0, 1.0,
+								  1.0, -1.0, 1.0,
+								 -1.0,  1.0, 1.0,
+								  1.0,  1.0, 1.0];
 							  
-				normals = [ 0.0, 0.0, 1,
+				normals = [ 
 							0.0, 0.0, 1,
 							0.0, 0.0, 1,
-							0.0, 0.0, 1 ];
+							0.0, 0.0, 1,
+							0.0, 0.0, 1, 
 							
-				indices = [ 0, 1, 2, 3 ];
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							0.0, 0.0, 1,
+							
+							0.0, 0.0, 1,
+							0.0, 0.0, 1
+							];
+							
+				indices = [2, 0, 6, 4, 5, 0, 1, 2, 3, 6, 7, 5, 3, 1];
 
-				textCoords = [  0.0, 0.0,
-								1.0, 0.0,
-								0.0, 1.0,
-								1.0, 1.0 ];
+				textCoords = [    0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0,
+										
+										0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0,
+										
+										0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0,
+										
+										0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0,
+										
+										0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0,
+										
+										0.0, 0.0,
+										1.0, 0.0,
+										0.0, 1.0,
+										1.0, 1.0];
 				
 				normalBuffer     = getArrayBufferWithArray(normals);
 				vertexBuffer     = getArrayBufferWithArray(vertices);
@@ -288,6 +383,49 @@
 				}
 			}
 
+			var mouseDown = false;
+			var lastMouseX = null;
+			var lastMouseY = null;
+		  
+			var rotationMatrix = mat4.create();
+			mat4.identity(rotationMatrix);
+			
+			function handleMouseDown(event) {
+				mouseDown = true;
+				lastMouseX = event.clientX;
+				lastMouseY = event.clientY
+			}
+
+			function handleMouseUp(event) {
+				mouseDown = false;
+			}
+
+			function degToRad(degrees){
+				return degrees * Math.PI / 180;
+			}
+			
+			function handleMouseMove(event) {
+				
+				if (!mouseDown)
+					return;
+				var newX = event.clientX;
+				var newY = event.clientY;
+				
+				var newRotationMatrix = mat4.create();
+				mat4.identity(newRotationMatrix);
+			
+				var deltaX = newX - lastMouseX;
+				mat4.rotate(newRotationMatrix, degToRad(deltaX / 5), [0, 1, 0]);
+
+				var deltaY = newY - lastMouseY;
+				mat4.rotate(newRotationMatrix, degToRad(deltaY / 5), [1, 0, 0]);
+
+				mat4.multiply(newRotationMatrix, rotationMatrix, rotationMatrix);
+				
+				lastMouseX = newX
+				lastMouseY = newY;
+			}
+			
 			/**
 			* Draws the scene
 			*/
@@ -301,8 +439,12 @@
 				//send transformation matrices to vertex shader
 				mat4.perspective( 60.0, c_width / c_height, 0.1, 10000.0, pMatrix);
 				mat4.identity(mvMatrix);
-				mat4.translate(mvMatrix, [0.0, 0.0, -2.0]);
-				mat4.rotate(mvMatrix, -0.7, [1,0,0]);
+				
+				mat4.translate(mvMatrix, [0.0, 0.0, -4.0]);
+				mat4.multiply(mvMatrix, rotationMatrix);
+				
+				//mat4.rotate(mvMatrix, -0.7, [1,0,0]);
+				
 				//mat4.rotate(mvMatrix, absRot/2, [0,1,0]);
 
 				setLightPosition();				
@@ -322,6 +464,10 @@
 				glContext.uniform1i(prg.usingColorMapUniformLeft, document.getElementById( "useColorMapCheckBoxLeft" ).checked);
 				glContext.uniform1i(prg.usingNormalMapUniformLeft, document.getElementById( "useNormalMapCheckBoxLeft" ).checked);
 				glContext.uniform1i(prg.usingSpecularMapUniformLeft, document.getElementById( "useSpecularMapCheckBoxLeft" ).checked);
+				
+				glContext.uniform1i(prg.usingColorMapUniformRight, document.getElementById( "useColorMapCheckBoxRight" ).checked);
+				glContext.uniform1i(prg.usingNormalMapUniformRight, document.getElementById( "useNormalMapCheckBoxRight" ).checked);
+				glContext.uniform1i(prg.usingSpecularMapUniformRight, document.getElementById( "useSpecularMapCheckBoxRight" ).checked);
 				
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalBuffer);
 				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
@@ -343,6 +489,18 @@
 				glContext.activeTexture(glContext.TEXTURE2);
 				glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[currentSpecularMapIDLeft-1]);
 				glContext.uniform1i(prg.uSpecularMapLeft, 2);
+				
+				glContext.activeTexture(glContext.TEXTURE3);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentColorMapIDRight-1]);
+				glContext.uniform1i(prg.uColorTextureRight, 3);
+
+				glContext.activeTexture(glContext.TEXTURE4);
+				glContext.bindTexture(glContext.TEXTURE_2D, texNormalTab[currentNormalMapIDRight-1]);
+				glContext.uniform1i(prg.uNormalMapRight, 4);
+
+				glContext.activeTexture(glContext.TEXTURE5);
+				glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[currentSpecularMapIDRight-1]);
+				glContext.uniform1i(prg.uSpecularMapRight, 5);
 				
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
@@ -378,27 +536,50 @@
 		</script>
   
 		<script>
-			function WriteIDs(){
-				document.getElementById("spanIDs").innerHTML = "colorMap[" + currentColorMapIDLeft + "] normalMap[" + currentNormalMapIDLeft + "] specularMap[" + currentSpecularMapIDLeft + "]";
-				//console.log( coucou );
+		
+			function WriteIDsLeft(){
+				document.getElementById("spanIDsLeft").innerHTML = "colorMap[" + currentColorMapIDLeft + "] normalMap[" + currentNormalMapIDLeft + "] specularMap[" + currentSpecularMapIDLeft + "]";
 			}
 
+			function WriteIDsRight()
+			{
+				document.getElementById("spanIDsRight").innerHTML = "colorMap[" + currentColorMapIDRight + "] normalMap[" + currentNormalMapIDRight + "] specularMap[" + currentSpecularMapIDRight + "]";
+			}
+			
 			function changeColorMapLeft(){
 				if( currentColorMapIDLeft < maxSample ) ++currentColorMapIDLeft;
 				else currentColorMapIDLeft = 1;
-				WriteIDs();
+				WriteIDsLeft();
 			}
 
 			function changeNormalMapLeft(){
 				if( currentNormalMapIDLeft < maxSample ) ++currentNormalMapIDLeft;
 				else currentNormalMapIDLeft = 1;
-				WriteIDs();
+				WriteIDsLeft();
 			}
 
 			function changeSpecularMapLeft(){
 				if( currentSpecularMapIDLeft < maxSample ) ++currentSpecularMapIDLeft;
 				else currentSpecularMapIDLeft = 1;
-				WriteIDs();
+				WriteIDsLeft();
+			}
+			
+			function changeColorMapRight(){
+				if( currentColorMapIDRight < maxSample ) ++currentColorMapIDRight;
+				else currentColorMapIDRight = 1;
+				WriteIDsRight();
+			}
+
+			function changeNormalMapRight(){
+				if( currentNormalMapIDRight < maxSample ) ++currentNormalMapIDRight;
+				else currentNormalMapIDRight = 1;
+				WriteIDsRight();
+			}
+
+			function changeSpecularMapRight(){
+				if( currentSpecularMapIDRight < maxSample ) ++currentSpecularMapIDRight;
+				else currentSpecularMapIDRight = 1;
+				WriteIDsRight();
 			}
 
 			function animateObject(){
@@ -425,27 +606,32 @@
 			<input id="animateCheckBox" type="checkbox" checked=true onchange="animateObject()">Rotation</input>
 			<br />
 
-			<span id="spanID1"><button id="colorMapButtonLeft" onclick="changeColorMapLeft()">ColorMap</button></span>
-			<span id="spanID2"><button id="normalMapButtonLeft" onclick="changeNormalMapLeft()">NormalMap</button></span>
-			<span id="spanID3"><button id="specularMapButtonLeft" onclick="changeSpecularMapLeft()">SpecularMap</button></span>
-			<span id="spanIDs"><script>WriteIDs();</script></span>
-			
-			<!--<label>Right </label>
+			<span id="spanID1Left"><button id="colorMapButtonLeft" onclick="changeColorMapLeft()">ColorMap</button></span>
+			<span id="spanID2Left"><button id="normalMapButtonLeft" onclick="changeNormalMapLeft()">NormalMap</button></span>
+			<span id="spanID3Left"><button id="specularMapButtonLeft" onclick="changeSpecularMapLeft()">SpecularMap</button></span>
+			<span id="spanIDsLeft"><script>WriteIDsLeft();</script></span>
+			<br />
+			<label>Right </label>
 			<input id="useColorMapCheckBoxRight" type="checkbox" checked=true onchange="changeTheMapUse( 'useColorMapCheckBoxRight', 'colorMapButtonRight' )">ColorMap</input>
 			<input id="useNormalMapCheckBoxRight" type="checkbox" checked=true onchange="changeTheMapUse( 'useNormalMapCheckBoxRight', 'normalMapButtonRight' )">NormalMap</input>
 			<input id="useSpecularMapCheckBoxRight" type="checkbox" checked=true onchange="changeTheMapUse( 'useSpecularMapCheckBoxRight', 'specularMapButtonRight' )">SpecularMap</input>
-			<input id="animateCheckBox" type="checkbox" checked=true onchange="animateObject()">Rotation</input>
 			<br />
 			
-			<span id="spanID1"><button id="colorMapButtonRight" onclick="changeColorMapRight()">ColorMap</button></span>
-			<span id="spanID2"><button id="normalMapButtonRight" onclick="changeNormalMapRight()">NormalMap</button></span>
-			<span id="spanID3"><button id="specularMapButtonRight" onclick="changeSpecularMapRight()">SpecularMap</button></span>
-			<span id="spanIDs"><script>WriteIDs();</script></span>-->
+			<span id="spanID1Right"><button id="colorMapButtonRight" onclick="changeColorMapRight()">ColorMap</button></span>
+			<span id="spanID2Right"><button id="normalMapButtonRight" onclick="changeNormalMapRight()">NormalMap</button></span>
+			<span id="spanID3Right"><button id="specularMapButtonRight" onclick="changeSpecularMapRight()">SpecularMap</button></span>
+			<span id="spanIDsRight"><script>WriteIDsRight();</script></span>
 		</p>
 		<!-- WebGL canvas -->
 		<canvas id="webgl-canvas" width="500" height="500">
 			HTML5 is not supported
 		</canvas>
 	</body>
+
+<script id="code-js" type="text/javascript">
+	document.getElementById("webgl-canvas").onmousedown = handleMouseDown;
+	document.onmouseup = handleMouseUp;
+	document.onmousemove = handleMouseMove;	
+</script>
 
 </html>
