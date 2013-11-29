@@ -50,11 +50,11 @@
 				if(gl_FrontFacing)
 				{
 					vec2 offsetLeft = vec2(deltaTexX, deltaTexY);
-					vec2 offsetRight = vec2(deltaTexX, deltaTexY);
+					vec2 offsetRight = vec2(deltaTexY, deltaTexX);
 					
 					vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
 					vec2 mapCoordLeft = mapCoord + offsetLeft;
-					vec2 mapCoordRight = mapCoord + 1.0 - offsetRight;
+					vec2 mapCoordRight = mapCoord + offsetRight;
 					
 					if(mapCoordLeft.x > 1.0) mapCoordLeft.x -= 1.0;
 					if(mapCoordLeft.y > 1.0) mapCoordLeft.y -= 1.0;
