@@ -270,7 +270,7 @@
 			// EQ 5 : distance of zoom
 			var distance = 0;
 		  
-			// EQ 5 : rotation matrix
+			// EQ 5 : rotation matrixN
 			var rotationMatrix = mat4.create();
 			mat4.identity(rotationMatrix);
 			
@@ -364,15 +364,16 @@
 				// EQ 5 : Drawing the tree from all sides (-45°, 0°, 45°, 90°)
 				var rotVertices = vertices;
 				var rotNormals = normals;
+				currentTexID = 0;
 				for(var i = -nbSteps/2; i < nbSteps/2; i++)
 				{
-					
-					// EQ 5 : Drawing the give polygon
-					drawElement(rotVertices,rotNormals);
-					
 					//EQ 5 : Rotate vertices and normals
 					rotVertices = verticesRotY(vertices, degToRad(i*180/nbSteps));
 					rotNormals = verticesRotY(normals, degToRad(i*180/nbSteps));
+					
+					// EQ 5 : Drawing the give polygon
+					drawElement(rotVertices,rotNormals);
+
 					currentTexID++;
 
 				}
@@ -401,7 +402,7 @@
 			}
 			
 			// EQ 5 : drawing one element with given vertices and normals
-			function drawElement(myVertices,myNormals)
+			function drawElement(myVertices,myNormals, textureId)
 			{
 				var myVertexBuffer = getArrayBufferWithArray(myVertices);
 				var myNormalBuffer = getArrayBufferWithArray(myNormals);
@@ -417,7 +418,8 @@
 				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
 				
 				glContext.activeTexture(glContext.TEXTURE0);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID-1]);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID]);
+
 				glContext.uniform1i(prg.uColorTexture, 0);
 		
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -436,8 +438,8 @@
 				initLights();
 				
 				//Initializes texture
-				for( var index=1; index<=maxSample; ++index ) {
-					initTextureWithImage("fig/"+(index-1)+".png", texColorTab);					
+				for( var index=0; index<maxSample; ++index ) {
+					initTextureWithImage("fig/"+index+".png", texColorTab);						
 				}
 				
 				//Renders the quad!
