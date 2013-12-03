@@ -79,8 +79,6 @@
 				if(texelColor[0] == (254.0/255.0) &&  texelColor[1] == (121.0/255.0) && texelColor[2] == (243.0/255.0))
 				{
 					alpha = 0.0; 	
-					
-					// EQ 5 : For transparencyd
 					discard;					
 				}
 				vec3 finalColor = uLightAmbient;
@@ -386,8 +384,6 @@
 				// current texture associated material behavior
 				initLights();
 				
-
-
 				//Drawing all tress of the forest
 				for(var i = 0; i<forest.length; i++)
 				{
@@ -482,7 +478,13 @@
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, myVertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 
-				glContext.uniform1i(prg.uColorTexture, currentTexID);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID]);
+
+				glContext.uniform1i(prg.uColorTexture, 0);
 		
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
@@ -509,48 +511,24 @@
 				
 				//Initialising camera distance (to see the entire forest)
 				distance = -10;
-				
-				// EQ 5 : Binding textures (only done once)
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
-				glContext.activeTexture(glContext.TEXTURE1);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
-				glContext.activeTexture(glContext.TEXTURE2);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
-				glContext.activeTexture(glContext.TEXTURE3);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
-				glContext.activeTexture(glContext.TEXTURE4);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
-				glContext.activeTexture(glContext.TEXTURE5);
-				
-				// EQ 5 : Binding texture coords (only done once)
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
-				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
-				
 			}
 			// EQ 5 : Generating trees of the forest (position and size)
 			function generateForest()
 			{
-				for(var i=0; i<10; i++)
+				for(var i=0; i<getRand(10,20); i++)
 				{
-					makeRandomTree();
+					var x = getRand(-5,5);
+					var y = 0;
+					var z = getRand(-5,5);
+					var w = getRand(1,3);
+					var h = getRand(1,6);
+					forest[i] = new Array();
+					forest[i][0] = x;
+					forest[i][1] = y;
+					forest[i][2] = z;
+					forest[i][3] = w;
+					forest[i][4] = h;
 				}
-			}
-			
-			// EQ 5 : Add tree with random position and dimensions
-			function makeRandomTree()
-			{
-				var x = getRand(-5,5);
-				var y = 0;
-				var z = getRand(-5,5);
-				var w = getRand(1,3);
-				var h = getRand(1,6);
-				var i = forest.length;
-				forest[i] = new Array();
-				forest[i][0] = x;
-				forest[i][1] = y;
-				forest[i][2] = z;
-				forest[i][3] = w;
-				forest[i][4] = h;
 			}
 
 		</script>
@@ -577,8 +555,6 @@
           <li>Rotation : Mouse movement (left button down)</li>
 		  <li>Movin camera : Mouse movement (right button down)</li>
           <li>Zoom : Mouse wheel</li>
-		  <li>Add tree : +</li>
-		  <li>Delete tree : -</li>
 
         </ul>
 		<!-- WebGL canvas -->
@@ -616,39 +592,6 @@
 			rolled = event.detail;
 		}
 		distance += -rolled/10;
-	}
-	
-	window.onkeydown = checkKey;
-	var delta = 5;
-	function checkKey(ev){
-		
-		switch(ev.keyCode){
-			
-			// EQ5: catch '+' key and increment the number of subdivisions (if valid).
-			case 49: // '+' key (from keyboard)
-			case 107: // '+' key (from num pad)
-			
-				// EQ 5 : Add a tree to the forest
-				makeRandomTree();
-				break;
-			
-			// EQ5: catch '-' key and decrement the number of subdivisions (if valid).
-			case 173: // '-' key (from keyboard)
-			case 109: // '-' key (from number pad)
-			case 189: // '-' key (from Mac)
-			
-				if(forest.length > 0)
-				{
-					// EQ 5 : Delete a tree from the forest
-					delete forest[forest.length-1];
-					forest.splice(forest.length-1,forest.length);
-				}
-				break;
-	
-			default:
-				console.log(ev.keyCode); //--- DEBUG LINE ---
-				break;
-		}
 	}
 </script>
 </html>

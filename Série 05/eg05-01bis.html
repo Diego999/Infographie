@@ -38,6 +38,7 @@
 			precision highp float;
 			#endif
 
+			// EQ5: added a second variable holding the texture colors.
 			uniform sampler2D uColorTextureLeft;			
 			uniform sampler2D uColorTextureRight;	
 			
@@ -49,9 +50,14 @@
 			void main(void) {
 				if(gl_FrontFacing)
 				{
+					// EQ5: Inverted offset behvior of left and right texture.
+					//      When left image moves up/down the right image moves left/right and vice-versa.
 					vec2 offsetLeft = vec2(deltaTexX, deltaTexY);
 					vec2 offsetRight = vec2(deltaTexY, deltaTexX);
 					
+					
+					// EQ5: initialize the mapCoordinates to get the texture values.
+					//      Afterwards check if the coordinates are in the valid range and adapt the coordinates if necessary.
 					vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
 					vec2 mapCoordLeft = mapCoord + offsetLeft;
 					vec2 mapCoordRight = mapCoord + offsetRight;
@@ -62,9 +68,12 @@
 					if(mapCoordRight.x > 1.0) mapCoordRight.x -= 1.0;
 					if(mapCoordRight.y > 1.0) mapCoordRight.y -= 1.0;
 					
+					// EQ5: get the two colors from the two uniform texture variables using the maps coordinates.
 					vec4 texelColorLeft = texture2D(uColorTextureLeft, mapCoordLeft); // the natural material color
 					vec4 texelColorRight = texture2D(uColorTextureRight, mapCoordRight); // the natural material color
 
+					// EQ5: The final color depends on the x map coordinate.
+					//      The x map coordiante defines the weight of the right and left color
 					gl_FragColor = texelColorLeft*(1.0-mapCoord.x) + mapCoord.x*texelColorRight;
 				}
 				else
@@ -73,6 +82,7 @@
 		</script>
 
 		<script>
+			// EQ5: Second id variable holding the right texture id.
 			var currentTexIDLeft = 1;
 			var currentTexIDRight = 1;
 			
@@ -122,7 +132,8 @@
 				prg.mvMatrixUniform         = glContext.getUniformLocation(prg, 'uMVMatrix');
 				//prg.nUniform 		        = glContext.getUniformLocation(prg, "uNormalMatrix");
 
-				//--- Information for the Fragment Shader ---				
+				// EQ5: Get the two references of the uniform variables holding the texture color maps.
+				//--- Information for the Fragment Shader ---
 				prg.uColorTextureLeft 			= glContext.getUniformLocation(prg, "uColorTextureLeft");
 				prg.uColorTextureRight			= glContext.getUniformLocation(prg, "uColorTextureRight");
 				
@@ -207,6 +218,7 @@
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
 				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
 				
+				// EQ5: bind the two java script texture maps to the associated webgl uniform variables.
 				glContext.activeTexture(glContext.TEXTURE0);
 				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexIDLeft-1]);
 				glContext.uniform1i(prg.uColorTextureLeft, 0);
@@ -247,6 +259,7 @@
 
 		<script>
 			function WriteIDs(){
+				// EQ5: Write the the ID's for the left and right texture in to the spanIds html element.
 				document.getElementById("spanIDs").innerHTML = "TextureID Left: " + currentTexIDLeft + "<br />" + "TextureID Right: " + currentTexIDRight; 
 			}
 
@@ -256,6 +269,7 @@
 				WriteIDs();
 			}
 			
+			// EQ5: Appended second method to handle user texture change requests
 			function changeRightTexture(){
 				if( currentTexIDRight < maxSample ) ++currentTexIDRight;
 				else currentTexIDRight = 1;
@@ -299,6 +313,7 @@
         <p>
 			<input id="animateCheckBox1" type="checkbox" onchange="animateObject()">Rotation du carré</input>
 			Translation :
+			<!-- EQ5: duplicated control elements to handle left and right texture seperatly. -->
 			<input id="animateCheckBox2" type="checkbox" onchange="animateTexture()">Texture sur X</input>
 			<input id="animateCheckBox3" type="checkbox" onchange="animateTexture()">Texture sur Y</input>
 			<br />

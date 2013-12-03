@@ -79,8 +79,6 @@
 				if(texelColor[0] == (254.0/255.0) &&  texelColor[1] == (121.0/255.0) && texelColor[2] == (243.0/255.0))
 				{
 					alpha = 0.0; 	
-					
-					// EQ 5 : For transparencyd
 					discard;					
 				}
 				vec3 finalColor = uLightAmbient;
@@ -119,10 +117,6 @@
 			var nMatrix = mat4.create();  // The normal matrix (related to the mvMatrix)
 						
 			var rotObject = 0;
-			
-			// EQ 5 : Array containing random number of tree with random position and size
-			
-			var forest = new Array();
 			
 			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
 			function initShaderParameters(prg){
@@ -260,14 +254,9 @@
 				}
 			}
 			
-			var leftMouseDown = false;
-			var rightMouseDown = false;
+			var mouseDown = false;
 			var lastMouseX = null;
 			var lastMouseY = null;
-			var moveXInWorld = 0;
-			var moveYInWorld = 0;
-			var lastRightMouseX = 0;
-			var lastRightMouseY = 0;
 			
 			// EQ 5 : distance of zoom
 			var distance = 0;
@@ -278,74 +267,37 @@
 			
 			// EQ 5 : Mouse down handler
 			function handleMouseDown(event) {
-
-				//EQ 5 : Left button
-				if(event.which == 3 || event.button == 2)
-				{
-					lastRightMouseX = event.clientX;
-					lastRightMouseY = event.clientY;
-					rightMouseDown = true;
-				}
-				//EQ 5 : Right button
-				else if(event.which == 1 || event.button == 0)
-				{
-					lastMouseX = event.clientX;
-					lastMouseY = event.clientY
-					leftMouseDown = true;
-				}
-				
+				mouseDown = true;
+				lastMouseX = event.clientX;
+				lastMouseY = event.clientY
 			}
 			
 			// EQ 5 : Mouse up handler
 			function handleMouseUp(event) {
-				if(event.which == 3 || event.button == 2)
-				{
-					rightMouseDown = false;
-				}
-				//EQ 5 : Right button
-				else if(event.which == 1 || event.button == 0)
-				{
-					leftMouseDown = false;
-				}
+				mouseDown = false;
 			}
 			
 			// EQ 5 : Mouse move handler
 			function handleMouseMove(event) {
 				
-				//console.log(event.button);
+				if (!mouseDown)
+					return;
 				var newX = event.clientX;
 				var newY = event.clientY;
 				
-				//Right mouse button
-				if(rightMouseDown)
-				{
-					var deltaX = newX - lastRightMouseX;
-					var deltaY = newY - lastRightMouseY;
-					
-					moveXInWorld += deltaX/100;
-					moveYInWorld -= deltaY/100;
-					
-					lastRightMouseX = newX;
-					lastRightMouseY = newY;
-					
-				}
+				var newRotationMatrix = mat4.create();
+				mat4.identity(newRotationMatrix);
+			
+				var deltaX = newX - lastMouseX;
+				mat4.rotate(newRotationMatrix, degToRad(deltaX / 5), [0, 1, 0]);
+
+				var deltaY = newY - lastMouseY;
+				mat4.rotate(newRotationMatrix, degToRad(deltaY / 5), [1, 0, 0]);
+
+				mat4.multiply(newRotationMatrix, rotationMatrix, rotationMatrix);
 				
-				//Left mouse button
-				if(leftMouseDown)
-				{
-					var newRotationMatrix = mat4.create();
-					mat4.identity(newRotationMatrix);
-					
-					var deltaX = newX - lastMouseX;
-					mat4.rotate(newRotationMatrix, degToRad(deltaX / 5), [0, 1, 0]);
-	                
-					var deltaY = newY - lastMouseY;
-					mat4.rotate(newRotationMatrix, degToRad(deltaY / 5), [1, 0, 0]);
-	                
-					mat4.multiply(newRotationMatrix, rotationMatrix, rotationMatrix);
-					lastMouseX = newX
-					lastMouseY = newY;
-				}
+				lastMouseX = newX
+				lastMouseY = newY;
 			}
 
 			/**
@@ -371,7 +323,7 @@
 				mat4.rotate(mvMatrix , rotObject, [0,1,0]);
 				
 				// EQ 5 : Add zoom translation
-				mat4.translate(mvMatrix, [moveXInWorld, moveYInWorld, -4.0 + distance]);
+				mat4.translate(mvMatrix, [0.0, 0.0, -4.0 + distance]);
 				mat4.multiply(mvMatrix, rotationMatrix);
 				
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
@@ -386,32 +338,14 @@
 				// current texture associated material behavior
 				initLights();
 				
-
-
-				//Drawing all tress of the forest
-				for(var i = 0; i<forest.length; i++)
-				{
-					var x = forest[i][0];
-					var y = forest[i][1];
-					var z = forest[i][2];
-					var w = forest[i][3];
-					var h = forest[i][4];
-					drawATree(x,y,z,w,h);
-				}
-			}
-			
-			// EQ 5 : Draw a tree at position x,y,z with given width (w) and height (h)
-			function drawATree(x,y,z,w,h)
-			{
-				
 				//EQ 5 : numbre for textures (rotate on Y axe)
 				var nbSteps = 4;
 				
 				
 				// EQ 5 : Initialising vertices and normals 
-				vertices = [ -w/2, -h/2, 0.0,
-							  3.0*(w/2), -h/2, 0.0,
-							 -w/2,  3.0*(h/2), 0.0];
+				vertices = [ -1, -1.0, 0.0,
+							  3, -1.0, 0.0,
+							 -1,  3.0, 0.0];
 							 
 				normals = [ 0.0, 0.0, 1.0,
 							0.0, 0.0, 1.0,
@@ -428,9 +362,6 @@
 					rotVertices = verticesRotY(vertices, degToRad(i*180/nbSteps));
 					rotNormals = verticesRotY(normals, degToRad(i*180/nbSteps));
 					
-					
-					//EQ 5 : translate vertices at position
-					rotVertices = verticesTranslation(rotVertices,x,y+h/2,z);
 					// EQ 5 : Drawing the give polygon
 					drawElement(rotVertices,rotNormals);
 
@@ -438,16 +369,11 @@
 
 				}
 				
-				//For the ground texture only the width is important
-				vertices = [ -w/2, -w/2, 0.0,
-							  3.0*(w/2), -w/2, 0.0,
-							 -w/2,  3.0*(w/2), 0.0];
-				
 				// EQ 5 : Rotation of the vertices
 				rotVertices = verticesRotX(vertices, degToRad(90));
 				
 				// EQ 5 : Translation of the vertices
-				rotVertices = verticesTranslation(rotVertices,x,y,z);
+				rotVertices = verticesTranslation(rotVertices,0,-1,0);
 				
 				// EQ 5 : Rotating the normals
 				rotNormals = verticesRotX(normals, degToRad(90));
@@ -457,16 +383,13 @@
 				
 				// EQ 5 : Reset texture id to 1
 				currentTexID = 1;
+				
+
+
 			}
 			// EQ 5 : utiliy function to convert degrees to radians
 			function degToRad(degrees){
 				return( degrees * Math.PI / 180.0 );
-			}
-			
-			//EQ 5 : utility function to get rand number
-			function getRand(a,b)
-			{
-				return Math.floor((Math.random()*(b-a))+a);
 			}
 			
 			// EQ 5 : drawing one element with given vertices and normals
@@ -482,7 +405,13 @@
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, myVertexBuffer);
 				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 
-				glContext.uniform1i(prg.uColorTexture, currentTexID);
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
+				
+				glContext.activeTexture(glContext.TEXTURE0);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID]);
+
+				glContext.uniform1i(prg.uColorTexture, 0);
 		
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
@@ -503,54 +432,9 @@
 				for( var index=0; index<maxSample; ++index ) {
 					initTextureWithImage("fig/"+index+".png", texColorTab);						
 				}
-				generateForest();
+				
 				//Renders the quad!
 				renderLoop();
-				
-				//Initialising camera distance (to see the entire forest)
-				distance = -10;
-				
-				// EQ 5 : Binding textures (only done once)
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
-				glContext.activeTexture(glContext.TEXTURE1);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
-				glContext.activeTexture(glContext.TEXTURE2);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
-				glContext.activeTexture(glContext.TEXTURE3);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
-				glContext.activeTexture(glContext.TEXTURE4);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
-				glContext.activeTexture(glContext.TEXTURE5);
-				
-				// EQ 5 : Binding texture coords (only done once)
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
-				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
-				
-			}
-			// EQ 5 : Generating trees of the forest (position and size)
-			function generateForest()
-			{
-				for(var i=0; i<10; i++)
-				{
-					makeRandomTree();
-				}
-			}
-			
-			// EQ 5 : Add tree with random position and dimensions
-			function makeRandomTree()
-			{
-				var x = getRand(-5,5);
-				var y = 0;
-				var z = getRand(-5,5);
-				var w = getRand(1,3);
-				var h = getRand(1,6);
-				var i = forest.length;
-				forest[i] = new Array();
-				forest[i][0] = x;
-				forest[i][1] = y;
-				forest[i][2] = z;
-				forest[i][3] = w;
-				forest[i][4] = h;
 			}
 
 		</script>
@@ -570,15 +454,12 @@
 	</head>
 	
 	<body onload="initWebGL()">
-		<script>displayTitle("Eg06-05 : Display a forest", 0,0,1,0);</script>
-		<p>Display a forest with random number of threes of random dimensions</p>
+		<script>displayTitle("Eg06-03 : Display a tree", 0,0,1,0);</script>
+		<p>Display a tree the most realistic as possible (using billboard cloud)</p>
 		<p>Possible interactions:</p>
         <ul>
-          <li>Rotation : Mouse movement (left button down)</li>
-		  <li>Movin camera : Mouse movement (right button down)</li>
+          <li>Rotation : Mouse movement</li>
           <li>Zoom : Mouse wheel</li>
-		  <li>Add tree : +</li>
-		  <li>Delete tree : -</li>
 
         </ul>
 		<!-- WebGL canvas -->
@@ -616,39 +497,6 @@
 			rolled = event.detail;
 		}
 		distance += -rolled/10;
-	}
-	
-	window.onkeydown = checkKey;
-	var delta = 5;
-	function checkKey(ev){
-		
-		switch(ev.keyCode){
-			
-			// EQ5: catch '+' key and increment the number of subdivisions (if valid).
-			case 49: // '+' key (from keyboard)
-			case 107: // '+' key (from num pad)
-			
-				// EQ 5 : Add a tree to the forest
-				makeRandomTree();
-				break;
-			
-			// EQ5: catch '-' key and decrement the number of subdivisions (if valid).
-			case 173: // '-' key (from keyboard)
-			case 109: // '-' key (from number pad)
-			case 189: // '-' key (from Mac)
-			
-				if(forest.length > 0)
-				{
-					// EQ 5 : Delete a tree from the forest
-					delete forest[forest.length-1];
-					forest.splice(forest.length-1,forest.length);
-				}
-				break;
-	
-			default:
-				console.log(ev.keyCode); //--- DEBUG LINE ---
-				break;
-		}
 	}
 </script>
 </html>

@@ -407,11 +407,8 @@
 
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
 				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
-				
-				glContext.activeTexture(glContext.TEXTURE0);
-				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[currentTexID]);
 
-				glContext.uniform1i(prg.uColorTexture, 0);
+				glContext.uniform1i(prg.uColorTexture, currentTexID);
 		
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLE_STRIP, indices.length, glContext.UNSIGNED_SHORT,0);
@@ -432,7 +429,22 @@
 				for( var index=0; index<maxSample; ++index ) {
 					initTextureWithImage("fig/"+index+".png", texColorTab);						
 				}
+				// EQ 5 : Binding textures (only done once)
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[0]);
+				glContext.activeTexture(glContext.TEXTURE1);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[1]);
+				glContext.activeTexture(glContext.TEXTURE2);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[2]);
+				glContext.activeTexture(glContext.TEXTURE3);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[3]);
+				glContext.activeTexture(glContext.TEXTURE4);
+				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
+				glContext.activeTexture(glContext.TEXTURE5);
+				//glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
 				
+				// EQ 5 : Binding texture coords (only done once)
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
+				glContext.vertexAttribPointer(prg.textureCoordsAttribute, 2, glContext.FLOAT, false, 0, 0);
 				//Renders the quad!
 				renderLoop();
 			}
