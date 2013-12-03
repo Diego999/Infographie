@@ -145,7 +145,7 @@
 					NLeft *= normalVectorLeft;
 					NLeft = normalize(NLeft);
 					
-					float lambertTermLeft = dot(NRight,-L);
+					float lambertTermLeft = dot(NLeft,-L);
 					float lambertTermRight = dot(NRight,-L);
 				
 					float specular = 0.0;
@@ -161,7 +161,7 @@
 						
 						if(lambertTermLeft > 0.0 && lambertTermRight > 0.0)
 						{
-							diffuse *= (lambertTermLeft + lambertTermRight)/2.0;
+							diffuse *= (lambertTermLeft*(1.0-gradient) + lambertTermRight*gradient);
 							specular *= (specVectorLeft*(1.0-gradient) + specVectorRight*gradient) * (specularLeft*(1.0-gradient) + specularRight*gradient);
 						}
 						else if(lambertTermLeft > 0.0)
