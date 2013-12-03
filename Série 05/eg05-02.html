@@ -86,13 +86,13 @@
 
 				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
 				
-				vec3 baseColorLeft;
-				vec3 normalVectorLeft;
-				vec3 specVectorLeft;
+				vec3 baseColorLeft = vec3(0.0, 0.0, 0.0);
+				vec3 normalVectorLeft = vec3(0.0, 0.0, 0.0);
+				vec3 specVectorLeft = vec3(0.0, 0.0, 0.0);
 				
-				vec3 baseColorRight;
-				vec3 normalVectorRight;
-				vec3 specVectorRight;
+				vec3 baseColorRight = vec3(0.0, 0.0, 0.0);
+				vec3 normalVectorRight = vec3(0.0, 0.0, 0.0);
+				vec3 specVectorRight = vec3(0.0, 0.0, 0.0);
 				
 				vec3 finalColor = uLightAmbient;
 
@@ -157,8 +157,13 @@
 					}
 				}
 				
-				finalColor *= (baseColorLeft.xyz + baseColorRight.xyz)/2.0;
-				
+				if(usingColorMapLeft && usingColorMapRight)
+					finalColor *= (baseColorLeft.xyz + baseColorRight.xyz)/2.0;
+				else if(usingColorMapLeft)
+					finalColor *= baseColorLeft.xyz;
+				else
+					finalColor *= baseColorRight.xyz;
+					
 				gl_FragColor = vec4(finalColor, 1.0);
 			}
 		</script>
