@@ -79,12 +79,26 @@
 			varying vec3 vNormal;
 			varying vec3 vLightRay;
 			varying vec3 vEyeVec;
-
+			
+			uniform float deltaTexX;
+			uniform float deltaTexY;
+			
 			void main(void) {
+				vec2 offset = vec2(deltaTexX, deltaTexY);
+			
 				vec3 L = normalize(vLightRay);
 				vec3 N = normalize(vNormal);	
 
 				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
+				vec2 mapCoordLeft = mapCoord + offset;
+				vec2 mapCoordRight = mapCoord + 1.0 - offset;
+				
+				if(mapCoordLeft.x > 1.0) mapCoordLeft.x -= 1.0;
+				if(mapCoordLeft.y > 1.0) mapCoordLeft.y -= 1.0;
+				
+				if(mapCoordRight.x > 1.0) mapCoordRight.x -= 1.0;
+				if(mapCoordRight.y > 1.0) mapCoordRight.y -= 1.0;
+					
 				
 				vec3 baseColorLeft = vec3(0.0, 0.0, 0.0);
 				vec3 normalVectorLeft = vec3(0.0, 0.0, 0.0);
@@ -96,22 +110,22 @@
 				
 				vec3 finalColor = uLightAmbient;
 
-				if( usingColorMapLeft ) baseColorLeft = vec3(texture2D(uColorTextureLeft, mapCoord));             // the natural material color
+				if( usingColorMapLeft ) baseColorLeft = vec3(texture2D(uColorTextureLeft, mapCoordLeft));             // the natural material color
 				else baseColorLeft = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapLeft ) normalVectorLeft = normalize(vec3(texture2D(uNormalMapLeft, mapCoord))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				if( usingNormalMapLeft ) normalVectorLeft = normalize(vec3(texture2D(uNormalMapLeft, mapCoordLeft))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
 				else normalVectorLeft = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
 				
-				if( usingSpecularMapLeft ) specVectorLeft = vec3(texture2D(uSpecularMapLeft, mapCoord));          // the specular effect
+				if( usingSpecularMapLeft ) specVectorLeft = vec3(texture2D(uSpecularMapLeft, mapCoordLeft));          // the specular effect
 				else specVectorLeft = vec3( 0.0, 0.0, 0.0 ); // no specular
 												
-				if( usingColorMapRight ) baseColorRight = vec3(texture2D(uColorTextureRight, mapCoord));             // the natural material color
+				if( usingColorMapRight ) baseColorRight = vec3(texture2D(uColorTextureRight, mapCoordRight));             // the natural material color
 				else baseColorRight = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapRight ) normalVectorRight = normalize(vec3(texture2D(uNormalMapRight, mapCoord))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				if( usingNormalMapRight ) normalVectorRight = normalize(vec3(texture2D(uNormalMapRight, mapCoordRight))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
 				else normalVectorRight = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
 				
-				if( usingSpecularMapRight ) specVectorRight = vec3(texture2D(uSpecularMapRight, mapCoord));          // the specular effect
+				if( usingSpecularMapRight ) specVectorRight = vec3(texture2D(uSpecularMapRight, mapCoordRight));          // the specular effect
 				else specVectorRight = vec3( 0.0, 0.0, 0.0 ); // no specular
 				
 				if(usingNormalMapLeft || usingSpecularMapLeft || usingNormalMapRight || usingSpecularMapRight){
@@ -158,7 +172,7 @@
 				}
 				
 				if(usingColorMapLeft && usingColorMapRight)
-					finalColor *= (baseColorLeft.xyz + baseColorRight.xyz)/2.0;
+					finalColor *= baseColorLeft.xyz*(1.0-mapCoord.x) + baseColorRight.xyz*mapCoord.x;
 				else if(usingColorMapLeft)
 					finalColor *= baseColorLeft.xyz;
 				else
@@ -201,6 +215,12 @@
 						
 			var rotLight = 0;
 			var objectInRotation = 1;
+
+			var textureInTranslation = 0;
+			var textureOffsetX = 0.0;
+			var textureOffsetY = 0.0;
+			const deltaTranslateX = 0.001;
+			const deltaTranslateY = 0.002;
 			
 			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
 			function initShaderParameters(prg){
@@ -247,6 +267,9 @@
 				prg.uColorTextureRight 			= glContext.getUniformLocation(prg, "uColorTextureRight");
 				prg.uNormalMapRight   			= glContext.getUniformLocation(prg, "uNormalMapRight");
 				prg.uSpecularMapRight   			= glContext.getUniformLocation(prg, "uSpecularMapRight");
+				
+				prg.deltaTexX 				= glContext.getUniformLocation(prg, "deltaTexX");
+				prg.deltaTexY				= glContext.getUniformLocation(prg, "deltaTexY");
 			}
 
 			function initBuffers(){
@@ -512,7 +535,24 @@
 				
 				//mat4.rotate(mvMatrix, absRot/2, [0,1,0]);
 
-				setLightPosition();				
+				setLightPosition();
+				
+				switch( textureInTranslation ) {
+					case 1:
+						if (textureOffsetX<1.0) textureOffsetX += deltaTranslateX;
+						else textureOffsetX = 0.0;
+					break;
+					case 2:
+						if (textureOffsetY<1.0) textureOffsetY += deltaTranslateY;
+						else textureOffsetY = 0.0;
+					break;
+					case 3:
+						if (textureOffsetX<1.0) textureOffsetX += deltaTranslateX;
+						else textureOffsetX = 0.0;
+						if (textureOffsetY<1.0) textureOffsetY += deltaTranslateY;
+						else textureOffsetY = 0.0;
+					break;
+				}
 				
 				glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
 				glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);
@@ -566,6 +606,9 @@
 				glContext.activeTexture(glContext.TEXTURE5);
 				glContext.bindTexture(glContext.TEXTURE_2D, texSpecTab[currentSpecularMapIDRight-1]);
 				glContext.uniform1i(prg.uSpecularMapRight, 5);
+				
+				glContext.uniform1f(prg.deltaTexX, textureOffsetX);
+				glContext.uniform1f(prg.deltaTexY, textureOffsetY);
 				
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);
@@ -657,6 +700,16 @@
 				if( document.getElementById( checkboxID ).checked ) document.getElementById( buttonID ).disabled = false;
 				else document.getElementById( buttonID ).disabled = true;
 			}
+			
+			function animateTexture(){ 
+				if( document.getElementById("animateCheckBox2").checked ) 
+					textureInTranslation = 1;
+				else
+					textureInTranslation = 0;
+					
+				if( document.getElementById("animateCheckBox3").checked ) 
+					textureInTranslation += 2;
+			}
 		</script>
 	</head>
 	
@@ -669,6 +722,8 @@
 			<input id="useNormalMapCheckBoxLeft" type="checkbox" checked=true onchange="changeTheMapUse( 'useNormalMapCheckBoxLeft', 'normalMapButtonLeft' )">NormalMap</input>
 			<input id="useSpecularMapCheckBoxLeft" type="checkbox" checked=true onchange="changeTheMapUse( 'useSpecularMapCheckBoxLeft', 'specularMapButtonLeft' )">SpecularMap</input>
 			<input id="animateCheckBox" type="checkbox" checked=true onchange="animateObject()">Rotation</input>
+			<input id="animateCheckBox2" type="checkbox" onchange="animateTexture()">Texture sur X</input>
+			<input id="animateCheckBox3" type="checkbox" onchange="animateTexture()">Texture sur Y</input>
 			<br />
 
 			<span id="spanID1Left"><button id="colorMapButtonLeft" onclick="changeColorMapLeft()">ColorMap</button></span>
