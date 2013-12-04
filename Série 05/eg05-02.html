@@ -21,7 +21,7 @@
 		    attribute vec3 aVertexNormal;
 			attribute vec3 aVertexPosition;
 			attribute vec2 aTextureCoord;
-			attribute float aInvertedTextures;
+			attribute float aInvertedTextures; //EQ 5 : Contains the information if the texture is inverted for the current vertice
 			
 			uniform mat4 uNMatrix;
 			uniform mat4 uMVMatrix;
@@ -33,7 +33,7 @@
 			varying vec3 vNormal;
 			varying vec3 vLightRay;
 			varying vec3 vEyeVec;
-			varying float vInvertedTextures;
+			varying float vInvertedTextures; //EQ 5 : Varying for the FS
 			
 			void main(void) {
 				vTextureCoord = aTextureCoord;
@@ -44,7 +44,7 @@
 				vec4 light = vec4(uLightPosition,1.0);
 				vLightRay = vertex.xyz - light.xyz;
 				vEyeVec = -vec3(vertex.xyz);
-				vInvertedTextures = aInvertedTextures;
+				vInvertedTextures = aInvertedTextures; //EQ 5 : Pass to the FS
 				
 				gl_Position = uPMatrix * vertex;
 			}
@@ -61,6 +61,8 @@
 			uniform vec3 uMaterialDiffuse;		// diffuse color
 			uniform vec3 uMaterialSpecular;		// specular color
 
+			//EQ 5 : Manage left and right texture
+			
 			uniform bool usingColorMapLeft;
 			uniform bool usingNormalMapLeft;
 			uniform bool usingSpecularMapLeft;			
@@ -93,6 +95,7 @@
 				vec3 L = normalize(vLightRay);
 				vec3 N = normalize(vNormal);
 				
+				// EQ 5 : Calculate map position (as part 1)
 				vec2 mapCoord = vec2(vTextureCoord.s, vTextureCoord.t);
 
 				vec2 mapCoordLeft = mapCoord + offset;
@@ -104,6 +107,7 @@
 				if(mapCoordRight.x > 1.0) mapCoordRight.x -= 1.0;
 				if(mapCoordRight.y > 1.0) mapCoordRight.y -= 1.0;
 				
+				// EQ 5 : Invert x map position  if necessary
 				float gradient = mapCoord.x;
 				if(vInvertedTextures>0.0)
 					gradient = 1.0 - mapCoord.x;
@@ -121,7 +125,7 @@
 				if( usingColorMapLeft ) baseColorLeft = vec3(texture2D(uColorTextureLeft, mapCoordLeft));             // the natural material color
 				else baseColorLeft = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapLeft ) normalVectorLeft = normalize(vec3(texture2D(uNormalMapLeft, mapCoordLeft))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				if( usingNormalMapLeft ) normalVectorLeft = normalize(vec3(texture2D(uNormalMapLeft, mapCoordLeft))); // the normal has a direct effet on diffuse and specular effects => they have to be normal
 				else normalVectorLeft = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
 				
 				if( usingSpecularMapLeft ) specVectorLeft = vec3(texture2D(uSpecularMapLeft, mapCoordLeft));          // the specular effect
@@ -130,7 +134,7 @@
 				if( usingColorMapRight ) baseColorRight = vec3(texture2D(uColorTextureRight, mapCoordRight));             // the natural material color
 				else baseColorRight = vec3(0.5, 0.5, 0.5); // middle grey
 				
-				if( usingNormalMapRight ) normalVectorRight = normalize(vec3(texture2D(uNormalMapRight, mapCoordRight))); // the normal has a direct effet on diffuse and specular effects => they have to be normali
+				if( usingNormalMapRight ) normalVectorRight = normalize(vec3(texture2D(uNormalMapRight, mapCoordRight))); // the normal has a direct effet on diffuse and specular effects => they have to be normal
 				else normalVectorRight = vec3( 0.0, 0.0, 1.0 ); // basic normal (z=1)
 				
 				if( usingSpecularMapRight ) specVectorRight = vec3(texture2D(uSpecularMapRight, mapCoordRight));          // the specular effect
@@ -145,6 +149,7 @@
 					NLeft *= normalVectorLeft;
 					NLeft = normalize(NLeft);
 					
+					//EQ 5 : If texture left and right are enable, we take the weighed average with gradient
 					float lambertTermLeft = dot(NLeft,-L);
 					float lambertTermRight = dot(NRight,-L);
 				
@@ -193,6 +198,7 @@
 		</script>
 
 		<script>
+			//EQ 5 : Manage both texture (Left & Right)
 			var currentColorMapIDLeft    = 1;
 			var currentNormalMapIDLeft   = 1;
 			var currentSpecularMapIDLeft = 1;
@@ -219,7 +225,7 @@
 			var indices    = []; // JavaScript array to store the indices of the quad
 			var vertices   = []; // JavaScript array to store the vertices of the quad
 			var textCoords = []; // JavaScript array to store the texture coordinates
-			var invertedTextures = []; // EQ5: JavaScript array to holds information about if a texture for e triangle should be inverted
+			var invertedTextures = []; // EQ 5: JavaScript array to holds information about if a texture for e triangle should be inverted
 
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix  = mat4.create(); // The projection matrix
@@ -228,6 +234,7 @@
 			var rotLight = 0;
 			var objectInRotation = 1;
 
+			//EQ 5 : Manage translation offset
 			var textureInTranslation = 0;
 			var textureOffsetX = 0.0;
 			var textureOffsetY = 0.0;
@@ -251,6 +258,7 @@
 				prg.textureCoordsAttribute  = glContext.getAttribLocation(prg, "aTextureCoord");
 				glContext.enableVertexAttribArray(prg.textureCoordsAttribute);
 				
+				//EQ 5 : Get reference on aInvertedTextures attribute
 				prg.invertedTexturesAttribute  = glContext.getAttribLocation(prg, "aInvertedTextures");
 				glContext.enableVertexAttribArray(prg.invertedTexturesAttribute);
 				
@@ -283,11 +291,13 @@
 				prg.uNormalMapRight   			= glContext.getUniformLocation(prg, "uNormalMapRight");
 				prg.uSpecularMapRight   			= glContext.getUniformLocation(prg, "uSpecularMapRight");
 				
+				//EQ 5 : Get reference on deltaTex* uniform
 				prg.deltaTexX 				= glContext.getUniformLocation(prg, "deltaTexX");
 				prg.deltaTexY				= glContext.getUniformLocation(prg, "deltaTexY");
 			}
 
 			function initBuffers(){
+				//EQ 5 : Define a cube with simple triangles
 				vertices = [
 					// Front face
 					-1.0, -1.0,  1.0,
@@ -373,6 +383,7 @@
 					20, 21, 22,   20, 22, 23  // Left face
 				];
 				
+				// EQ 5 : < 0 is normal, > 0 inverted texture
 				invertedTextures = [
 					-1.0, -1.0, -1.0, -1.0, // Front face
 					-1.0, -1.0, -1.0, -1.0, // Back face
@@ -424,6 +435,7 @@
 				vertexBuffer     = getArrayBufferWithArray(vertices);
 				indexBuffer      = getIndexBufferWithIndices(indices);
 				textCoordsBuffer = getArrayBufferWithArray(textCoords);
+				// EQ 5 : Get the buffer reference
 				invertedTexturesBuffer = getArrayBufferWithArray	(invertedTextures);
 			}
 
@@ -440,6 +452,7 @@
 			
 			// setting material properties
 			function initMaterialProperties(){
+				//EQ 5 : Manage left and right texture
 				switch( currentColorMapIDLeft ) {
 				case 1: { // rough rock wall
 						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
@@ -498,6 +511,7 @@
 				}
 			}
 
+			//EQ 5 : Natural rotation
 			var mouseDown = false;
 			var lastMouseX = null;
 			var lastMouseY = null;
@@ -554,14 +568,14 @@
 				//send transformation matrices to vertex shader
 				mat4.perspective( 60.0, c_width / c_height, 0.1, 10000.0, pMatrix);
 				mat4.identity(mvMatrix);
-				
+			
 				mat4.translate(mvMatrix, [0.0, 0.0, -4.0]);
+				//EQ 5 : Multiply rotationMatrix instead of a static rotation
 				mat4.multiply(mvMatrix, rotationMatrix);
 				
-				//mat4.rotate(mvMatrix, absRot/2, [0,1,0]);
-
 				setLightPosition();
 				
+				//EQ 5 : Manage the offset for the texture's translation
 				switch( textureInTranslation ) {
 					case 1:
 						if (textureOffsetX<1.0) textureOffsetX += deltaTranslateX;
@@ -591,6 +605,7 @@
 				// current texture associated material behavior
 				initMaterialProperties();
 
+				//EQ 5 : Modifiy Left & Right
 				glContext.uniform1i(prg.usingColorMapUniformLeft, document.getElementById( "useColorMapCheckBoxLeft" ).checked);
 				glContext.uniform1i(prg.usingNormalMapUniformLeft, document.getElementById( "useNormalMapCheckBoxLeft" ).checked);
 				glContext.uniform1i(prg.usingSpecularMapUniformLeft, document.getElementById( "useSpecularMapCheckBoxLeft" ).checked);
@@ -672,7 +687,7 @@
 		</script>
   
 		<script>
-		
+			//EQ 5 : Left & Right
 			function WriteIDsLeft(){
 				document.getElementById("spanIDsLeft").innerHTML = "colorMap[" + currentColorMapIDLeft + "] normalMap[" + currentNormalMapIDLeft + "] specularMap[" + currentSpecularMapIDLeft + "]";
 			}
@@ -682,6 +697,7 @@
 				document.getElementById("spanIDsRight").innerHTML = "colorMap[" + currentColorMapIDRight + "] normalMap[" + currentNormalMapIDRight + "] specularMap[" + currentSpecularMapIDRight + "]";
 			}
 			
+			// EQ 5 : Left & Right
 			function changeColorMapLeft(){
 				if( currentColorMapIDLeft < maxSample ) ++currentColorMapIDLeft;
 				else currentColorMapIDLeft = 1;
