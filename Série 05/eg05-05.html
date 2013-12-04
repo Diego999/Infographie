@@ -120,8 +120,7 @@
 						
 			var rotObject = 0;
 			
-			// EQ 5 : Array containing random number of tree with random position and size
-			
+			// EQ 5 : Array containing tree with random position and size
 			var forest = new Array();
 			
 			//this function is called from initProgram() which is defined in webglTools.js, it is implemented here for clarity
@@ -226,38 +225,11 @@
 			//initializes light position and colors
 			function initLights(){
 				glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
-				switch( currentTexID ) {
-				case 1: { // rought rock wall
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.3, 0.3, 0.3);	
-						glContext.uniform1f(prg.shininessUniform, 1.0);
-					} break;
-				case 2: { // wood symbol
-						glContext.uniform3f(prg.lightAmbientUniform, 0.9, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.4, 0.4, 0.4);	
-						glContext.uniform1f(prg.shininessUniform, 4.0);
-					} break;
-				case 3: { // nice stone wall
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.5, 0.5, 0.5);	
-						glContext.uniform1f(prg.shininessUniform, 8.0);
-					} break;
-				case 4: { // 'gallet' floor
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.7, 0.7, 0.7);	
-						glContext.uniform1f(prg.shininessUniform, 24.0);
-					} break;
-				case 5: { // dark dusty green sofa
-						glContext.uniform3f(prg.lightAmbientUniform, 0.3, 0.3, 0.3);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.7, 0.6);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.7, 0.1, 0.7);	
-						glContext.uniform1f(prg.shininessUniform, 25.0);
-					} break;
-				}
+				glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.3, 0.3, 0.3);	
+				glContext.uniform1f(prg.shininessUniform, 1.0);
+
 			}
 			
 			var leftMouseDown = false;
@@ -312,11 +284,10 @@
 			// EQ 5 : Mouse move handler
 			function handleMouseMove(event) {
 				
-				//console.log(event.button);
 				var newX = event.clientX;
 				var newY = event.clientY;
 				
-				//Right mouse button
+				// EQ 5 : Right mouse button
 				if(rightMouseDown)
 				{
 					var deltaX = newX - lastRightMouseX;
@@ -330,7 +301,7 @@
 					
 				}
 				
-				//Left mouse button
+				// EQ 5 : Left mouse button
 				if(leftMouseDown)
 				{
 					var newRotationMatrix = mat4.create();
@@ -388,7 +359,7 @@
 				
 
 
-				//Drawing all tress of the forest
+				// EQ 5 : Drawing all tress of the forest
 				for(var i = 0; i<forest.length; i++)
 				{
 					var x = forest[i][0];
@@ -438,7 +409,7 @@
 
 				}
 				
-				//For the ground texture only the width is important
+				// EQ 5 : For the ground texture we need a square (so use width for height too)
 				vertices = [ -w/2, -w/2, 0.0,
 							  3.0*(w/2), -w/2, 0.0,
 							 -w/2,  3.0*(w/2), 0.0];
@@ -503,11 +474,13 @@
 				for( var index=0; index<maxSample; ++index ) {
 					initTextureWithImage("fig/"+index+".png", texColorTab);						
 				}
+				
+				// EQ 5 : Generate initial tree
 				generateForest();
 				//Renders the quad!
 				renderLoop();
 				
-				//Initialising camera distance (to see the entire forest)
+				// EQ 5 : Initialising camera distance (to see the entire forest)
 				distance = -10;
 				
 				// EQ 5 : Binding textures (only done once)
@@ -551,6 +524,15 @@
 				forest[i][2] = z;
 				forest[i][3] = w;
 				forest[i][4] = h;
+				
+				// EQ 5 : Updating tree counter display
+				updateTreeCounterDisplay();
+			}
+			// EQ 5 : Updating tree counter display
+			function updateTreeCounterDisplay()
+			{
+				// EQ 5 : update infos in page
+				document.getElementById("treeCount").innerHTML = "Nb trees : " + forest.length;
 			}
 
 		</script>
@@ -571,6 +553,7 @@
 	
 	<body onload="initWebGL()">
 		<script>displayTitle("Eg06-05 : Display a forest", 0,0,1,0);</script>
+		<!-- EQ 5 : Display user infos -->
 		<p>Display a forest with random number of threes of random dimensions</p>
 		<p>Possible interactions:</p>
         <ul>
@@ -581,6 +564,8 @@
 		  <li>Delete tree : -</li>
 
         </ul>
+		<!-- EQ 5 : Display number of trees (changed in js code) -->
+		<p id="treeCount"> </p>
 		<!-- WebGL canvas -->
 		<!-- EQ 5 : Disable contextmenu on right click -->
 		<canvas id="webgl-canvas" width="500" height="500"  oncontextmenu="return false;">
@@ -642,6 +627,9 @@
 					// EQ 5 : Delete a tree from the forest
 					delete forest[forest.length-1];
 					forest.splice(forest.length-1,forest.length);
+					
+					// EQ 5 : Updating tree counter display
+					updateTreeCounterDisplay();
 				}
 				break;
 	
