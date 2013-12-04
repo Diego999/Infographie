@@ -220,38 +220,11 @@
 			//initializes light position and colors
 			function initLights(){
 				glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
-				switch( currentTexID ) {
-				case 1: { // rought rock wall
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.3, 0.3, 0.3);	
-						glContext.uniform1f(prg.shininessUniform, 1.0);
-					} break;
-				case 2: { // wood symbol
-						glContext.uniform3f(prg.lightAmbientUniform, 0.9, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.4, 0.4, 0.4);	
-						glContext.uniform1f(prg.shininessUniform, 4.0);
-					} break;
-				case 3: { // nice stone wall
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.5, 0.5, 0.5);	
-						glContext.uniform1f(prg.shininessUniform, 8.0);
-					} break;
-				case 4: { // 'gallet' floor
-						glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.4, 0.4, 0.4);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.7, 0.7, 0.7);	
-						glContext.uniform1f(prg.shininessUniform, 24.0);
-					} break;
-				case 5: { // dark dusty green sofa
-						glContext.uniform3f(prg.lightAmbientUniform, 0.3, 0.3, 0.3);
-						glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.7, 0.6);
-						glContext.uniform3f(prg.materialSpecularUniform, 0.7, 0.1, 0.7);	
-						glContext.uniform1f(prg.shininessUniform, 25.0);
-					} break;
-				}
+				glContext.uniform3f(prg.lightAmbientUniform, 0.5, 0.5, 0.5);
+				glContext.uniform3f(prg.materialDiffuseUniform, 0.6, 0.6, 0.6);
+				glContext.uniform3f(prg.materialSpecularUniform, 0.3, 0.3, 0.3);	
+				glContext.uniform1f(prg.shininessUniform, 1.0);
+
 			}
 			
 			var mouseDown = false;
@@ -440,7 +413,6 @@
 				glContext.activeTexture(glContext.TEXTURE4);
 				glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
 				glContext.activeTexture(glContext.TEXTURE5);
-				//glContext.bindTexture(glContext.TEXTURE_2D, texColorTab[4]);
 				
 				// EQ 5 : Binding texture coords (only done once)
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, textCoordsBuffer);
@@ -467,6 +439,7 @@
 	
 	<body onload="initWebGL()">
 		<script>displayTitle("Eg06-03 : Display a tree", 0,0,1,0);</script>
+		<!-- EQ 5 : Display user infos -->
 		<p>Display a tree the most realistic as possible (using billboard cloud)</p>
 		<p>Possible interactions:</p>
         <ul>
@@ -488,10 +461,10 @@
 
 	// EQ 5 : Getting mouse wheel events 
 	var canvas = document.getElementById ("webgl-canvas");
-	if (canvas.addEventListener) {    // all browsers except IE before version 9
-		// Internet Explorer, Opera, Google Chrome and Safari
+	if (canvas.addEventListener) {    // EQ 5 : all browsers except IE before version 9
+		// EQ 5 : Internet Explorer, Opera, Google Chrome and Safari
 		canvas.addEventListener ("mousewheel", MouseScroll, false);
-		// Firefox
+		// EQ 5 : Firefox
 		canvas.addEventListener ("DOMMouseScroll", MouseScroll, false);
 	}
 	else {
@@ -505,7 +478,7 @@
 		if ('wheelDelta' in event) {
 			rolled = event.wheelDelta;
 		}
-		else {  // Firefox
+		else {  // EQ 5 : Firefox
 			rolled = event.detail;
 		}
 		distance += -rolled/10;
