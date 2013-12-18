@@ -107,17 +107,57 @@
 		}
 		</script>
 
+		<script id="shader-control-vs" type="x-shader/x-vertex">
+		
+		////////////////////////////////////////////////
+		////            vertex shader               ////
+		////////////////////////////////////////////////
+		
+		attribute vec3 aVertexPosition;
+
+		uniform mat4 uMVMatrix; 
+		uniform mat4 uPMatrix;  
+		
+		void main(void) 
+		{
+			gl_PointSize = 20.0;
+			gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+		}
+		</script>
+		
+		<script id="shader-control-fs" type="x-shader/x-fragment">
+			
+		////////////////////////////////////////////////
+		////          fragment shader               ////
+		////////////////////////////////////////////////
+		
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		
+		
+		void main(void)
+		{	
+			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+		}
+		</script>
+		
 		<script>
 			
 			////////////////////////////////////////////////
 			////         Global JS variables            ////
 			////////////////////////////////////////////////
 			
+			var prgObject = null;
+			var prgControl = null;
+			var controlPoints = null;
+			
 			var rotX = 0.0; //rotation on the X-axis (in degrees) 
 			var rotY = 0.0; //rotation on the Y-axis (in degrees)
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
+			var controlPointsBuffer = null;
 			var indexBuffer = null;
 			var normalsBuffer = null;
 
@@ -175,7 +215,9 @@
 				
 				indices = payload.indices;
 				//initializes buffers: sends data from the javascript arrays to the graphics card
-				vertexBuffer = getVertexBufferWithVertices(payload.vertices);					
+				vertexBuffer = getVertexBufferWithVertices(payload.vertices);		
+				controlPoints = payload.controlPoints;
+				controlPointsBuffer = getVertexBufferWithVertices(payload.controlPoints);		
 				normalsBuffer = getVertexBufferWithVertices(payload.normals);
 				indexBuffer = getIndexBufferWithIndices(payload.indices);
 				
@@ -188,17 +230,18 @@
 
 			//initializes light position and colors
 			function initLights(){
-			    glContext.uniform3f(prg.lightPositionUniform, 1, 1, 1);
+				glContext.useProgram(prgObject);
+			    glContext.uniform3f(prgObject.lightPositionUniform, 1, 1, 1);
 				
-			    glContext.uniform3f(prg.lightAmbientUniform,0.1,0.1,0.1);
-			    glContext.uniform3f(prg.lightDiffuseUniform,1.0, 1.0, 1.0);
-			    glContext.uniform3f(prg.lightSpecularUniform, 0.8, 0.8, 0.8);
+			    glContext.uniform3f(prgObject.lightAmbientUniform,0.1,0.1,0.1);
+			    glContext.uniform3f(prgObject.lightDiffuseUniform,1.0, 1.0, 1.0);
+			    glContext.uniform3f(prgObject.lightSpecularUniform, 0.8, 0.8, 0.8);
 				
-				glContext.uniform3f(prg.materialAmbiantUniform, 1.0, 1.0, 1.0);	
-				glContext.uniform3f(prg.materialSpecularUniform, 1.0, 1.0, 1.0);	
-				glContext.uniform3f(prg.materialDiffuseUniform, 0.5, 0.5, 0.5);
+				glContext.uniform3f(prgObject.materialAmbiantUniform, 1.0, 1.0, 1.0);	
+				glContext.uniform3f(prgObject.materialSpecularUniform, 1.0, 1.0, 1.0);	
+				glContext.uniform3f(prgObject.materialDiffuseUniform, 0.5, 0.5, 0.5);
 				
-			    glContext.uniform1f(prg.shininessUniform, 24.0);
+			    glContext.uniform1f(prgObject.shininessUniform, 24.0);
 			}
 			
 			
@@ -207,8 +250,8 @@
 			////              WebGL related             ////
 			////////////////////////////////////////////////
 			
-			// Draws one image of the scene. If the rendering loop is started, this method is called periodically.
-			function drawScene(){
+			function drawScene()
+			{
 				//light grey background
 				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
 				
@@ -218,6 +261,13 @@
 				//resets color and depth buffer before drawing
 				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
 				
+				drawSceneInit();
+				drawSceneObject();
+				drawSceneControl();
+			}
+			
+			function drawSceneInit()
+			{
 				//defines viewport dimensions based on the webgl canvas size
 				glContext.viewport(0, 0, c_width, c_height);
 									    
@@ -233,27 +283,33 @@
 				
 				// apply the rotation matrix to the mvMatrix
 				mat4.multiply(mvMatrix, rotationMatrix);
-
+				
+				mat4.rotate(mvMatrix, degToRad(-10), [0, 1, 0]);
+			}
+			
+			// Draws one image of the scene. If the rendering loop is started, this method is called periodically.
+			function drawSceneObject(){
+				glContext.useProgram(prgObject);
 				//send the projection and model view matrices to the vertex shader
-			    glContext.uniformMatrix4fv(prg.pMatrixUniform, false, pMatrix);
-			    glContext.uniformMatrix4fv(prg.mvMatrixUniform, false, mvMatrix);	
-
+			    glContext.uniformMatrix4fv(prgObject.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prgObject.mvMatrixUniform, false, mvMatrix);
+				
 				//calculate and send the normal matrix for shading calculation			    	
 			    mat4.set(mvMatrix, nMatrix);
 			    mat4.inverse(nMatrix);
 			    mat4.transpose(nMatrix);
 			    
-			    glContext.uniformMatrix4fv(prg.nMatrixUniform, false, nMatrix);	
+			    glContext.uniformMatrix4fv(prgObject.nMatrixUniform, false, nMatrix);	
 
 				//1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
 				//   then ask Vertex Shader to draw triangles between vertices(1.4)
 				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
-				glContext.vertexAttribPointer(prg.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 
 				//1.2 Send the array of Vertex Normals for shading calculation
 				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
-				glContext.vertexAttribPointer(prg.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
+				glContext.vertexAttribPointer(prgObject.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
 
 				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -262,21 +318,43 @@
 				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);			
 			}
 			
+			function drawSceneControl()
+			{
+				glContext.useProgram(prgControl);
+				//send the projection and model view matrices to the vertex shader
+			    glContext.uniformMatrix4fv(prgControl.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prgControl.mvMatrixUniform, false, mvMatrix);
+				
+				//1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
+				//   then ask Vertex Shader to draw triangles between vertices(1.4)
+				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, controlPointsBuffer);
+				glContext.vertexAttribPointer(prgControl.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+
+				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+								
+				//1.4 Draw as triangles
+				glContext.drawArrays(glContext.POINTS, 0, controlPoints.length/3);	
+			}
+			
 			
 			// Initializes webgl, shaders, buffers and starts rendering loop
 			function initWebGL(){
 				glContext = getGLContext('webgl-canvas');
 				
+				
 				//Initializes the program (shaders).
-				initProgram();
+				prgObject = initProgram(initObjectShaderParameters, "shader-fs", "shader-vs");
+				prgControl = initProgram(initControlShaderParameters, "shader-control-fs", "shader-control-vs");
 				
 				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
 				//(vertex buffer, color and index buffer)
-				loadModel("models/bunny.json");
+				loadModel("models/cube.json");
 			}
 			
 			// gets the sahders uniform and attribute locations
-			function initShaderParameters(prg){
+			function initObjectShaderParameters(prg){
 				
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
@@ -300,6 +378,14 @@
 				prg.materialAmbiantUniform     = glContext.getUniformLocation(prg, 'uMaterialAmbiant');
 			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
 			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
+			}
+			
+			function initControlShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				
+				prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
 			}
 			
 			////////////////////////////////////////////////

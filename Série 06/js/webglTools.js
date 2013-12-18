@@ -14,20 +14,19 @@ var glC3 = null;
 var c_width = 0;
 var c_height = 0;
 
-var prg = null; // The program (shaders)
-
-
 /**
  * Allow to initialize Shaders.
  */
 function getShader(gl, id) {
 	var script = document.getElementById(id);
 	if (!script) {
+		
 	   return null;
 	}
 
 	var str = "";
 	var k = script.firstChild;
+	
 	while (k) {
 		if (k.nodeType == 3) {
 			str += k.textContent;
@@ -41,6 +40,7 @@ function getShader(gl, id) {
 	} else if (script.type == "x-shader/x-vertex") {
 		shader = glContext.createShader(glContext.VERTEX_SHADER);
 	} else {
+	
 		return null;
 	}
 
@@ -59,11 +59,13 @@ function getShader(gl, id) {
  * what to do with every vertex and fragment that we transmit.
  * The vertex shader and the fragment shaders together are called through that program.
  */
-function initProgram() {
-    var fgShader = getShader(glContext, "shader-fs");
-    var vxShader = getShader(glContext, "shader-vs");
+function initProgram(initShaderFct, fs, vs) {
+    var fgShader = getShader(glContext, fs);
+    var vxShader = getShader(glContext, vs);
 
-    prg = glContext.createProgram();
+	console.log(fgShader);
+	console.log(vxShader);
+    var prg = glContext.createProgram();
     glContext.attachShader(prg, vxShader);
     glContext.attachShader(prg, fgShader);
     glContext.linkProgram(prg);
@@ -72,10 +74,8 @@ function initProgram() {
         alert("Could not initialise shaders");
     }
 
-    glContext.useProgram(prg);
-
-    initShaderParameters(prg);
-
+    initShaderFct(prg);
+	return prg;
 }	
 
 function requestAnimFrame(o){
