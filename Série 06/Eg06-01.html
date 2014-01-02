@@ -518,7 +518,7 @@
 				//Compute the deformation for the neighborhood
 				for(var j = 0; j < neighbors.length; ++j)
 				{
-					pi = [vertices[neighbors[j]+0], vertices[neighbors[j]+1], vertices[neighbors[j]+2]];
+					pi = [vertices[neighbors[j]*3+0], vertices[neighbors[j]*3+1], vertices[neighbors[j]*3+2]];
 					pic = [0,0,0];
 					picc = [0,0,0];
 					pii = [0,0,0];
