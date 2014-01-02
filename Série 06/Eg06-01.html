@@ -159,11 +159,17 @@
 			var prgObject = null;
 			var prgControl = null;
 			var controlPoints = null;
+			var originalControlPoints = null;
 			var controlPointsNeighbors = null;
 			var controlPointSelected = 0;
 			
 			var rotX = 0.0; //rotation on the X-axis (in degrees) 
 			var rotY = 0.0; //rotation on the Y-axis (in degrees)
+			
+			var dx = 0;
+			var dy = 0;
+			var dz = 0;
+			var deltaXYZ = 0.1;
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
@@ -173,6 +179,7 @@
 
 			var indices = []; //JavaScript array to store the indices of the polygon
 			var vertices = [];
+			var originalVertices = [];
 			
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix = mat4.create(); // The projection matrix
@@ -226,8 +233,10 @@
 				indices = payload.indices;
 				//initializes buffers: sends data from the javascript arrays to the graphics card
 				vertices = payload.vertices;
+				originalVertices = payload.vertices;
 				vertexBuffer = getVertexBufferWithVertices(vertices);		
 				controlPoints = payload.controlPoints;
+				originalControlPoints = payload.controlPoints;
 				controlPointsNeighbors = payload.controlPointsNeighbors;
 				controlPointsBuffer = getVertexBufferWithVertices(payload.controlPoints);		
 				normalsBuffer = getVertexBufferWithVertices(payload.normals);
@@ -429,10 +438,6 @@
 			
 			function checkKey(ev){
 				var delta = 20;
-				var dx = 0;
-				var dy = 0;
-				var dz = 0;
-				var deltaXYZ = 0.1;
 				switch(ev.keyCode){
 					case 65: // 'a' 
 						rotateObject(-delta, 0);
@@ -457,23 +462,22 @@
 						distance += 0.1;
 						break;
 					case 89://y plan x - decrease
-						dx = -deltaXYZ;
-						
+						dx -= deltaXYZ;
 						break;
 					case 88://x plan x - increase
-						dx = deltaXYZ;
+						dx += deltaXYZ;
 						break;
 					case 67://c plan y - decrease
-						dy = -deltaXYZ;
+						dy -= deltaXYZ;
 						break;	
 					case 86://v plan y - increase
-						dy = deltaXYZ;
+						dy += deltaXYZ;
 						break;
 					case 66://b plan z - decrease
-						dz = -deltaXYZ;
+						dz -= deltaXYZ;
 						break;
 					case 78://n plan z - increase
-						dz = deltaXYZ;
+						dz += deltaXYZ;
 						break;
 					case 77://m
 							++controlPointSelected;
@@ -489,15 +493,17 @@
 					  console.log("Pressed/Non-treated key :" + ev.keyCode); //--- DEBUG LINE ---
 					break;
 				}
-				
-					applyDeformation(dx,dy,dz);
+				applyDeformation(dx,dy,dz);
 			}
 			
 			function norm(v){
 				return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 			}
 			
-			function applyDeformation(dx, dy, dz) {								
+			function applyDeformation(dx, dy, dz) {		
+				vertices = originalVertices.slice(0);
+				controlPoints = originalControlPoints.slice(0);
+
 				c = [controlPoints[controlPointSelected*3+0], controlPoints[controlPointSelected*3+1], controlPoints[controlPointSelected*3+2]];
 				d = [dx, dy, dz];
 			
