@@ -458,6 +458,7 @@
 						break;
 					case 89://y plan x - decrease
 						dx = -deltaXYZ;
+						
 						break;
 					case 88://x plan x - increase
 						dx = deltaXYZ;
@@ -488,23 +489,72 @@
 					  console.log("Pressed/Non-treated key :" + ev.keyCode); //--- DEBUG LINE ---
 					break;
 				}
-				applyDeformation(dx, dy, dz);
+				
+					applyDeformation(dx,dy,dz);
 			}
 			
-			function applyDeformation(dx, dy, dz) {						
-				for(var i = 0; i < vertices.length/3; ++i)
-					if(vertices[i*3+0] == controlPoints[controlPointSelected*controlPoints.length/3+0] && vertices[i*3+1] == controlPoints[controlPointSelected*controlPoints.length/3+1] && vertices[i*3+2] == controlPoints[controlPointSelected*controlPoints.length/3+2])
+			function norm(v){
+				return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+			}
+			
+			function applyDeformation(dx, dy, dz) {								
+				c = [controlPoints[controlPointSelected*3+0], controlPoints[controlPointSelected*3+1], controlPoints[controlPointSelected*3+2]];
+				d = [dx, dy, dz];
+			
+				cc = [0,0,0];
+				for(var i = 0; i < cc.length;++i)
+					cc[i] = c[i] + d[i];
+					
+				neighbors = controlPointsNeighbors[controlPointSelected];
+				neighborsNew = [];
+				neighborsCopy = [];
+				
+				//Compute the deformation for the neighborhood
+				for(var j = 0; j < neighbors.length; ++j)
+				{
+					pi = [vertices[neighbors[j]+0], vertices[neighbors[j]+1], vertices[neighbors[j]+2]];
+					pic = [0,0,0];
+					picc = [0,0,0];
+					pii = [0,0,0];
+					
+					for(var i = 0; i < pic.length; ++i)
 					{
-						vertices[i*controlPoints.length/3+0] += dx;
-						vertices[i*controlPoints.length/3+1] += dy;
-						vertices[i*controlPoints.length/3+2] += dz;
+						pic[i] = c[i]-pi[i];
+						picc[i] = cc[i]-pi[i];
 					}
-				controlPoints[controlPointSelected*controlPoints.length/3+0] += dx;
-				controlPoints[controlPointSelected*controlPoints.length/3+1] += dy;
-				controlPoints[controlPointSelected*controlPoints.length/3+2] += dz;
+					
+					for(var i = 0; i < pic.length; ++i)
+					{
+						pii[i] = pi[i] + (norm(d)/norm(pic))*picc[i];
+						neighborsNew.push(pii[i]);
+						neighborsCopy.push(pi[i]);
+					}
+				}
+				
+				//Update the new coordinates
+				
+				controlPoints[controlPointSelected*3+0] += dx;
+				controlPoints[controlPointSelected*3+1] += dy;
+				controlPoints[controlPointSelected*3+2] += dz;
+								
+				for(var i = 0; i < vertices.length/3; ++i)
+				{
+					for(var j = 0; j < neighbors.length; ++j)
+						if( vertices[i*3+0] == neighborsCopy[j*3 + 0] && 
+							vertices[i*3+1] == neighborsCopy[j*3 + 1] && 
+							vertices[i*3+2] == neighborsCopy[j*3 + 2])
+							for(var k = 0; k < 3; ++k)
+								vertices[i*3 + k] = neighborsNew[j*3+k];
+					//Control point							
+					if( vertices[i*3+0] == c[0] && 
+						vertices[i*3+1] == c[1] && 
+						vertices[i*3+2] == c[2])
+						for(var k = 0; k < 3; ++k)
+							vertices[i*3 + k] = cc[k];
+				}
 				
 				vertexBuffer = getVertexBufferWithVertices(vertices);		
-				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);		
+				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);
 			}
 			
 			function handleMouseDown(event)
