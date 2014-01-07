@@ -1,0 +1,71 @@
+newmtl Lara_eye_reflect
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.100000 0.100000 0.100000
+map_Kd Lara\Lara_eyeref_D.jpg
+
+newmtl Lara_hair
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_hair_D.jpg
+
+newmtl Lara_ponytail
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_ponytail_D.jpg
+
+newmtl Lara_eyelash
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_eyelash_D.jpg
+
+newmtl Lara_torso
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_torso_D.jpg
+
+newmtl Lara_legs
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_legs_D.jpg
+
+newmtl Lara_mouth
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_mouth_D.jpg
+
+newmtl Lara_eyes
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_eye_D.jpg
+
+newmtl Lara_boots
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_boots_D.jpg
+
+newmtl Lara_head
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_head_D.jpg
+
+newmtl Lara_hands
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_hands_D.jpg
+
+newmtl Lara_eyebrows
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.000000 0.000000 0.000000
+map_Kd Lara\Lara_eyebrows_D.jpg
