@@ -163,6 +163,8 @@
 			var controlPointsNeighbors = null;
 			var controlPointSelected = 0;
 			
+			var graph = [];
+			
 			var rotX = 0.0; //rotation on the X-axis (in degrees) 
 			var rotY = 0.0; //rotation on the Y-axis (in degrees)
 			
@@ -242,6 +244,19 @@
 				normalsBuffer = getVertexBufferWithVertices(payload.normals);
 				indexBuffer = getIndexBufferWithIndices(payload.indices);
 				
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph.push({key:i, value:new Set()});
+				
+				for(var i = 0; i < indices.length-1; ++i)
+				{
+					graph[indices[i]].value.add(indices[i+1]);
+					graph[indices[i+1]].value.add(indices[i]);
+				}
+					
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph[i].value = [v for (v of graph[i].value)];
+				
+				console.log(graph);
 				 //init lights
 				initLights();
 				
@@ -482,6 +497,7 @@
 					case 77://m
 							++controlPointSelected;
 							controlPointSelected %= controlPoints.length/3;
+							dx = dy = dz = 0;
 						break;
 					case 75://k
 							if(controlPointSelected == 0)
