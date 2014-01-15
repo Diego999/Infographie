@@ -63,8 +63,6 @@ function initProgram(initShaderFct, fs, vs) {
     var fgShader = getShader(glContext, fs);
     var vxShader = getShader(glContext, vs);
 
-	console.log(fgShader);
-	console.log(vxShader);
     var prg = glContext.createProgram();
     glContext.attachShader(prg, vxShader);
     glContext.attachShader(prg, fgShader);

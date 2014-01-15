@@ -9,6 +9,7 @@
 		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
 		<script src='js/gl-matrix-min.js'></script>		<!-- Matrix Library -->
 		<script src='js/webglTools.js'></script>		<!-- Basic WebGL initialization tools -->
+		<script src='js/obj.js'></script>		<!-- Basic WebGL initialization tools -->
 		
 		<script id="shader-vs" type="x-shader/x-vertex">
 		
@@ -17,39 +18,19 @@
 		////////////////////////////////////////////////
 		
 		attribute vec3 aVertexPosition;
-		attribute vec3 aVertexNormal;
+		attribute vec2 aTextureCoord;
 		
 		uniform mat4 uMVMatrix; 
 		uniform mat4 uPMatrix; 
-		uniform mat4 uNMatrix; 
-		
-		uniform vec3 uLightPosition;
-		
-		varying vec3 vNormal;
-		varying vec3 vLightRay;
-		varying  vec3 vEyeVec;		
-		
-		uniform float uShininess;       
-	
-		// Add some other lights
-		uniform vec3 uLightAmbient;
-		uniform vec3 uLightDiffuse;	
-		uniform vec3 uLightSpecular;		
-		
-		// Add some material 
-		uniform vec3 uMaterialAmbiant;	
-		uniform vec3 uMaterialDiffuse;      
-		uniform vec3 uMaterialSpecular;   
+			
+		varying vec2 vTextureCoord;
 		
 		void main(void) 
 		{
 			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
-			vNormal = vec3(uNMatrix * vec4(aVertexNormal, 1.0));
-			vec4 light = vec4(uLightPosition,1.0);
-			vLightRay = vertex.xyz - light.xyz;
-			vEyeVec = -vec3(vertex.xyz);
 			
 			gl_Position = uPMatrix * vertex;
+			vTextureCoord = aTextureCoord;
 		}
 		</script>
 		
@@ -64,46 +45,13 @@
 		precision highp float;
 		#endif
 		
-		uniform float uShininess;       
+		uniform sampler2D uSampler;
 		
-		// Add some other lights
-		uniform vec3 uLightAmbient;
-		uniform vec3 uLightDiffuse;	
-		uniform vec3 uLightSpecular;		
-		
-		// Add some material 
-		uniform vec3 uMaterialAmbiant;	
-		uniform vec3 uMaterialDiffuse;      
-		uniform vec3 uMaterialSpecular;   
-		
-		varying vec3 vNormal;
-		varying vec3 vLightRay;
-		varying vec3 vEyeVec;
+		varying vec2 vTextureCoord;
 		
 		void main(void)
-		{	
-			// Phong shading
-			vec3 L = normalize(vLightRay);
-			vec3 N = normalize(vNormal);
-			
-			vec3 la = uLightAmbient*uMaterialAmbiant;
-			vec3 ld = vec3(0.0, 0.0, 0.0);
-			vec3 ls = vec3(0.0, 0.0, 0.0);
-			vec3 color = vec3(0.0, 0.0, 0.0);
-			
-			float lambertTerm = dot(N,-L);//cos(theta), Lambert's cosine law
-			
-			if(lambertTerm > 0.0)
-			{
-				vec3 E = normalize(vEyeVec);
-				vec3 R = reflect(L, N);
-			
-				ld = uLightDiffuse*uMaterialDiffuse*lambertTerm;
-				ls = uLightSpecular*uMaterialSpecular*pow( max(dot(R, E), 0.0), uShininess);
-			}
-			
-			color = la + ld + ls;
-			gl_FragColor = vec4(color, 1.0);
+		{
+			gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
 		}
 		</script>
 
@@ -175,7 +123,6 @@
 			var vertexBuffer = null;
 			var controlPointsBuffer = null;
 			var indexBuffer = null;
-			var normalsBuffer = null;
 
 			var indices = []; //JavaScript array to store the indices of the polygon
 			var vertices = [];
@@ -183,7 +130,6 @@
 			
 			var mvMatrix = mat4.create(); // The Model-View matrix
 			var pMatrix = mat4.create(); // The projection matrix
-			var nMatrix = mat4.create(); // The normal matrix
 			
 			// rotation matrix
 			var rotationMatrix = mat4.create();
@@ -207,62 +153,86 @@
 			////////////////////////////////////////////////
 			
 			// Executes a http request via ajax, to load a model ressource.
-			function loadModel(filename){
-			    var request = new XMLHttpRequest();
-			    console.info('Requesting ' + filename);
-			    request.open("GET",filename);
-			    
-			    request.onreadystatechange = function() {
-			      if (request.readyState == 4) {
-			        if(request.status == 404) {
-			            console.info(filename + ' does not exist');
-			         }
-			        else {
-			            handleLoadedModel(filename,JSON.parse(request.responseText));
-
-			        }
-			      }
-			    }
-			    request.send();
+			function loadModel(name) {
+				loadObject(name);
+				loadTexture(name);
 			}
 			
-			// Initializes the buffers with the data loaded via the http request.
-			function handleLoadedModel(filename,payload) {			    
-			    console.info(filename + ' has been retrieved from the server');
-				
-				indices = payload.indices;
-				//initializes buffers: sends data from the javascript arrays to the graphics card
-				vertices = payload.vertices;
-				originalVertices = payload.vertices;
-				vertexBuffer = getVertexBufferWithVertices(vertices);		
-				controlPoints = payload.controlPoints;
-				originalControlPoints = payload.controlPoints;
-				controlPointsNeighbors = payload.controlPointsNeighbors;
-				controlPointsBuffer = getVertexBufferWithVertices(payload.controlPoints);		
-				normalsBuffer = getVertexBufferWithVertices(payload.normals);
-				indexBuffer = getIndexBufferWithIndices(payload.indices);
-				
-				 //init lights
-				initLights();
-				
-				//Starts rendering loop, calls drawScene
-				renderLoop();				
+			// Variables for the texture management
+			var allTex = [];
+			var uniqueTextures = [];
+			var allTexCount = -1;
+			var allTexLength = [];
+			var objVertexTextureCoordBuffer = [];
+			var objVertexPositionBuffer = [];
+			
+			var texture = [];
+			
+			var person;
+			
+			function loadObject(fileName) {
+				var request = new XMLHttpRequest();
+				request.open("GET", fileName+'.obj');
+				request.onreadystatechange = function () {
+					if (request.readyState == 4) {
+						person = handleLoadedObject(request.responseText, glContext, objVertexTextureCoordBuffer);
+						
+						initObjPrg();
+						//Starts rendering loop, calls drawScene
+						renderLoop();	
+						//drawScene();
+					}
+					
+				}
+				request.send();
 			}
+			
+			function loadTexture(filename)
+			{
+				var request = new XMLHttpRequest();
+				request.open("GET", filename + '.mtl');
+				request.onreadystatechange = function () {
+					if (request.readyState == 4) {
+						var lines = request.responseText.split("\n");
+						
+						for(var i=0; i<lines.length; i++){
+							var vals = lines[i].split(" ");
+							
+							if(vals[0] == "map_Kd"){
+								handleLoadedTexture(vals[1], texture);
+							}
+						}
+					}
+				}
+				request.send();
+			}
+			
+			function handleLoadedTexture(filePath, texture)
+			{
+				var i = texture.length;
+				texture[i] = glContext.createTexture();
+				texture[i].image = new Image();
+				texture[i].image.onload = function(){
+					glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+					glContext.bindTexture(glContext.TEXTURE_2D, texture[i]);
+					glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, texture[i].image);
+					glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+					glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+					
+					glContext.bindTexture(glContext.TEXTURE_2D, null);
+				}
+				texture[i].image.src = filePath;
+			}
+			
+			function initObjPrg(){
+				prgObject.vertexPositionAttribute = glContext.getAttribLocation(prgObject, "aVertexPosition");
+				glContext.enableVertexAttribArray(prgObject.vertexPositionAttribute);
+				
+				prgObject.textureCoordAttribute = glContext.getAttribLocation(prgObject, "aTextureCoord");
+				glContext.enableVertexAttribArray(prgObject.textureCoordAttribute);
+				
+				prgObject.samplerUniform = glContext.getUniformLocation(prgObject, "uSampler");
 
-			//initializes light position and colors
-			function initLights(){
-				glContext.useProgram(prgObject);
-			    glContext.uniform3f(prgObject.lightPositionUniform, 1, 1, 1);
-				
-			    glContext.uniform3f(prgObject.lightAmbientUniform,0.1,0.1,0.1);
-			    glContext.uniform3f(prgObject.lightDiffuseUniform,1.0, 1.0, 1.0);
-			    glContext.uniform3f(prgObject.lightSpecularUniform, 0.8, 0.8, 0.8);
-				
-				glContext.uniform3f(prgObject.materialAmbiantUniform, 1.0, 1.0, 1.0);	
-				glContext.uniform3f(prgObject.materialSpecularUniform, 1.0, 1.0, 1.0);	
-				glContext.uniform3f(prgObject.materialDiffuseUniform, 0.5, 0.5, 0.5);
-				
-			    glContext.uniform1f(prgObject.shininessUniform, 24.0);
 			}
 			
 			
@@ -276,6 +246,10 @@
 				//light grey background
 				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
 				
+				if (objVertexTextureCoordBuffer[0] == null || objVertexPositionBuffer[0] == null || objVertexTextureCoordBuffer[1] == null || objVertexPositionBuffer[1] == null) {
+					return;
+				}
+				
 				//activate z-buffer
 				glContext.enable(glContext.DEPTH_TEST);
 				
@@ -284,7 +258,7 @@
 				
 				drawSceneInit();
 				drawSceneObject();
-				drawSceneControl();
+				//drawSceneControl();
 			}
 			
 			function drawSceneInit()
@@ -315,28 +289,20 @@
 			    glContext.uniformMatrix4fv(prgObject.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prgObject.mvMatrixUniform, false, mvMatrix);
 				
-				//calculate and send the normal matrix for shading calculation			    	
-			    mat4.set(mvMatrix, nMatrix);
-			    mat4.inverse(nMatrix);
-			    mat4.transpose(nMatrix);
-			    
-			    glContext.uniformMatrix4fv(prgObject.nMatrixUniform, false, nMatrix);	
-
-				//1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
-				//   then ask Vertex Shader to draw triangles between vertices(1.4)
-				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, vertexBuffer);
-				glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.2 Send the array of Vertex Normals for shading calculation
-				glContext.bindBuffer(glContext.ARRAY_BUFFER, normalsBuffer);
-				glContext.vertexAttribPointer(prgObject.vertexNormalAttribute, 3, glContext.FLOAT, false, 0, 0);
-
-				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
-				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
-								
-				//1.4 Draw as triangles
-				glContext.drawElements(glContext.TRIANGLES, indices.length, glContext.UNSIGNED_SHORT,0);			
+				for(var i = 0; i < objVertexPositionBuffer.length; ++i)
+				{
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, objVertexPositionBuffer[i]);
+					glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, objVertexPositionBuffer[i].itemSize, glContext.FLOAT, false, 0, 0);
+					
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, objVertexTextureCoordBuffer[i]);
+					glContext.vertexAttribPointer(prgObject.textureCoordAttribute, objVertexTextureCoordBuffer[i].itemSize, glContext.FLOAT, false, 0, 0);
+					glContext.activeTexture(glContext.TEXTURE0);
+					glContext.bindTexture(glContext.TEXTURE_2D, texture[i]);
+					
+					glContext.uniform1i(prgObject.samplerUniform, 0);
+					
+					glContext.drawArrays(glContext.TRIANGLES, 0, objVertexPositionBuffer[i].numItems);
+				}
 			}
 			
 			function drawSceneControl()
@@ -377,7 +343,7 @@
 				
 				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
 				//(vertex buffer, color and index buffer)
-				loadModel("models/cube.json");
+				loadModel("person");
 			}
 			
 			// gets the sahders uniform and attribute locations
@@ -386,25 +352,9 @@
 				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
 			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
 			    
-			    prg.vertexNormalAttribute = glContext.getAttribLocation(prg, "aVertexNormal");
-			    glContext.enableVertexAttribArray(prg.vertexNormalAttribute);
-			    
 				// Uniform:
 			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
 			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
-			    prg.nMatrixUniform             = glContext.getUniformLocation(prg, 'uNMatrix');
-			    
-			    prg.lightPositionUniform       = glContext.getUniformLocation(prg, 'uLightPosition');
-			    
-				prg.shininessUniform           = glContext.getUniformLocation(prg, 'uShininess');
-				
-			    prg.lightAmbientUniform        = glContext.getUniformLocation(prg, 'uLightAmbient');
-			    prg.lightDiffuseUniform        = glContext.getUniformLocation(prg, 'uLightDiffuse');
-			    prg.lightSpecularUniform       = glContext.getUniformLocation(prg, 'uLightSpecular');
-				
-				prg.materialAmbiantUniform     = glContext.getUniformLocation(prg, 'uMaterialAmbiant');
-			    prg.materialDiffuseUniform     = glContext.getUniformLocation(prg, 'uMaterialDiffuse');
-			    prg.materialSpecularUniform    = glContext.getUniformLocation(prg, 'uMaterialSpecular');
 			}
 			
 			function initControlShaderParameters(prg){

@@ -1,26 +1,6 @@
 "use strict";
-var objjs = {};
 
-objjs.initTexture = function initTexture(fileName, gl) {
-	var request = new XMLHttpRequest();
-    request.open("GET", fileName+'.mtl');
-    request.onreadystatechange = function () {
-        if (request.readyState == 4) {
-            var lines = request.responseText.split("\n");
-            
-            for(var i=0; i<lines.length; i++){
-                var vals = lines[i].split(" ");
-                
-                if(vals[0] == "map_Kd"){
-                	objjs.loadTexture(vals[1], texture, gl);
-                }
-            }
-        }
-    }
-    request.send();
-}
-
-objjs.handleLoadedObject = function handleLoadedObject(data) {
+function handleLoadedObject(data, gl, objVertexTextureCoordBuffer) {
     var lines = data.split("\n");
     
     var vertexCount = [];
@@ -137,17 +117,5 @@ objjs.handleLoadedObject = function handleLoadedObject(data) {
 			]
 		);
 	}
-	console.log(vertexPositions);
 	return result;	
-}
-
-objjs.loadObject = function loadObject(fileName) {
-    var request = new XMLHttpRequest();
-    request.open("GET", fileName+'.obj');
-    request.onreadystatechange = function () {
-        if (request.readyState == 4) {
-            objjs.handleLoadedObject(request.responseText);
-        }
-    }
-    request.send();
 }
