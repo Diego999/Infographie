@@ -156,6 +156,7 @@
 			function loadModel(name) {
 				loadObject(name);
 				loadTexture(name);
+				loadControlPoints(name);
 			}
 			
 			// Variables for the texture management
@@ -185,6 +186,30 @@
 					
 				}
 				request.send();
+			}
+			
+			function loadControlPoints(fileName)
+			{
+				var request = new XMLHttpRequest();
+
+				request.open("GET", fileName + ".json");
+								
+				request.onreadystatechange = function() {
+					if (request.readyState == 4) {
+						if(request.status == 404) {
+							console.info(fileName + ' does not exist');
+						}
+						else {
+							handleLoadedControlPoints(JSON.parse(request.responseText));
+						}
+					}
+				}
+				request.send();
+			}
+			
+			function handleLoadedControlPoints(payload)
+			{
+				controlPoints = payload.controlPoints;
 			}
 			
 			function loadTexture(filename)
@@ -258,7 +283,7 @@
 				
 				drawSceneInit();
 				drawSceneObject();
-				//drawSceneControl();
+				drawSceneControl();
 			}
 			
 			function drawSceneInit()
@@ -319,9 +344,9 @@
 				glContext.vertexAttribPointer(prgControl.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 				
 				point = []
-				point.push(controlPoints[controlPointSelected*controlPoints.length/3+0],
-							controlPoints[controlPointSelected*controlPoints.length/3+1]
-							,controlPoints[controlPointSelected*controlPoints.length/3+2]);
+				point.push( controlPoints[controlPointSelected*controlPoints.length/3+0],
+							controlPoints[controlPointSelected*controlPoints.length/3+1],
+							controlPoints[controlPointSelected*controlPoints.length/3+2]);
 				glContext.uniform3fv(glContext.getUniformLocation(prgControl, 'uControlPointSelected'), point);
 				
 				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
