@@ -108,8 +108,10 @@
 			var prgControl = null;
 			var controlPoints = null;
 			var originalControlPoints = null;
-			var controlPointsNeighbors = null;
 			var controlPointSelected = 0;
+			var controlPointsIndex = null;
+			
+			var graph = [];
 			
 			var rotX = 0.0; //rotation on the X-axis (in degrees) 
 			var rotY = 0.0; //rotation on the Y-axis (in degrees)
@@ -125,6 +127,7 @@
 			var indexBuffer = null;
 
 			var indices = []; //JavaScript array to store the indices of the polygon
+			var vertices_slices = [];
 			var vertices = [];
 			var originalVertices = [];
 			
@@ -156,7 +159,6 @@
 			function loadModel(name) {
 				loadObject(name);
 				loadTexture(name);
-				loadControlPoints(name);
 			}
 			
 			// Variables for the texture management
@@ -169,19 +171,18 @@
 			
 			var texture = [];
 			
-			var person;
-			
 			function loadObject(fileName) {
 				var request = new XMLHttpRequest();
 				request.open("GET", fileName+'.obj');
 				request.onreadystatechange = function () {
 					if (request.readyState == 4) {
-						person = handleLoadedObject(request.responseText, glContext, objVertexTextureCoordBuffer);
+						rv = handleLoadedObject(request.responseText, glContext, objVertexTextureCoordBuffer);
 						
-						initObjPrg();
-						//Starts rendering loop, calls drawScene
-						renderLoop();	
-						//drawScene();
+						vertices_slices = rv.slices.slice(0);
+						vertices = rv.vertice_continue.slice(0);
+						originalVertices = rv.vertice_continue.slice(0);
+						
+						loadControlPoints(fileName);
 					}
 					
 				}
@@ -201,6 +202,11 @@
 						}
 						else {
 							handleLoadedControlPoints(JSON.parse(request.responseText));
+							
+							initObjPrg();
+						
+							renderLoop();	
+							//drawScene();
 						}
 					}
 				}
@@ -208,8 +214,44 @@
 			}
 			
 			function handleLoadedControlPoints(payload)
-			{
-				controlPoints = payload.controlPoints;
+			{				
+				controlPointsIndex = payload.controlPoints;
+				controlPoints = [];
+				originalControlPoints = [];
+				
+				for(var i = 0; i < controlPointsIndex.length; ++i)
+					for(var j = 0; j < 3; ++j)
+					{
+						controlPoints.push(vertices[controlPointsIndex[i]*3+j]);
+						originalControlPoints.push(vertices[controlPointsIndex[i]*3+j]);
+					}
+				
+				console.log(controlPoints);
+				console.log(originalControlPoints);
+
+				indices = [];
+				for(var i = 0; i < vertices.length/3; ++i)
+					indices.push(i);
+				
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph.push({key:i, value:new Set()});
+
+				for(var i = 0; i < indices.length-1; i+=3)
+				{
+					graph[indices[i+0]].value.add(indices[i+1]);
+					graph[indices[i+1]].value.add(indices[i+2]);
+					graph[indices[i+2]].value.add(indices[i+0]);
+					
+					graph[indices[i+1]].value.add(indices[i+0]);
+					graph[indices[i+2]].value.add(indices[i+1]);
+					graph[indices[i+0]].value.add(indices[i+2]);
+				}
+					
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph[i].value = [v for (v of graph[i].value)];
+					
+					
+				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);		
 			}
 			
 			function loadTexture(filename)
@@ -314,10 +356,12 @@
 			    glContext.uniformMatrix4fv(prgObject.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prgObject.mvMatrixUniform, false, mvMatrix);
 				
-				for(var i = 0; i < objVertexPositionBuffer.length; ++i)
+				for(var i = 0; i < vertices_slices.length; ++i)
 				{
-					glContext.bindBuffer(glContext.ARRAY_BUFFER, objVertexPositionBuffer[i]);
-					glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, objVertexPositionBuffer[i].itemSize, glContext.FLOAT, false, 0, 0);
+					var current_vertices = vertices.slice(vertices_slices[i].start, vertices_slices[i].end);
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, glContext.createBuffer());
+					glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(current_vertices), glContext.STATIC_DRAW);
+					glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 					
 					glContext.bindBuffer(glContext.ARRAY_BUFFER, objVertexTextureCoordBuffer[i]);
 					glContext.vertexAttribPointer(prgObject.textureCoordAttribute, objVertexTextureCoordBuffer[i].itemSize, glContext.FLOAT, false, 0, 0);
@@ -326,7 +370,7 @@
 					
 					glContext.uniform1i(prgObject.samplerUniform, 0);
 					
-					glContext.drawArrays(glContext.TRIANGLES, 0, objVertexPositionBuffer[i].numItems);
+					glContext.drawArrays(glContext.TRIANGLES, 0, current_vertices.length/3);
 				}
 			}
 			
@@ -475,65 +519,99 @@
 				return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
 			}
 			
+			function computeNeighboorhood(indice, set, n) {
+				if(n != 0) {
+					nexts = graph[indice].value;
+					
+					for(var i = 0; i < nexts.length; ++i)
+						if(!set.has(nexts[i]))
+						{
+							set.add(nexts[i]);
+							computeNeighboorhood(nexts[i], set, n-1);
+						}
+				}
+			}
+			
+			function getNeighbors(){
+				index_vertice = controlPointsIndex[controlPointSelected];
+				neighboorhoud = 1;
+				
+				set = new Set();
+				computeNeighboorhood(index_vertice, set, neighboorhoud);
+					
+				out = [v for (v of set)];
+				//console.log(out);
+				return out;
+			}
+			
 			function applyDeformation(dx, dy, dz) {		
 				vertices = originalVertices.slice(0);
 				controlPoints = originalControlPoints.slice(0);
 
 				c = [controlPoints[controlPointSelected*3+0], controlPoints[controlPointSelected*3+1], controlPoints[controlPointSelected*3+2]];
+				
 				d = [dx, dy, dz];
-			
 				cc = [0,0,0];
 				for(var i = 0; i < cc.length;++i)
 					cc[i] = c[i] + d[i];
 					
-				neighbors = controlPointsNeighbors[controlPointSelected];
+				temp = getNeighbors();
+				neighbors = [];
+				
+				for(var i = 0; i < temp.length; ++i)
+					for(var j = 0; j < 3; ++j)
+						neighbors.push(vertices[temp[i]*3+j]);
+
 				neighborsNew = [];
 				neighborsCopy = [];
-				
+
 				//Compute the deformation for the neighborhood
-				for(var j = 0; j < neighbors.length; ++j)
+				for(var j = 0; j < neighbors.length/3; ++j)
 				{
-					pi = [vertices[neighbors[j]*3+0], vertices[neighbors[j]*3+1], vertices[neighbors[j]*3+2]];
-					pic = [0,0,0];
-					picc = [0,0,0];
-					pii = [0,0,0];
-					
-					for(var i = 0; i < pic.length; ++i)
-					{
-						pic[i] = c[i]-pi[i];
-						picc[i] = cc[i]-pi[i];
-					}
-					
-					for(var i = 0; i < pic.length; ++i)
-					{
-						pii[i] = pi[i] + (norm(d)/norm(pic))*picc[i];
-						neighborsNew.push(pii[i]);
-						neighborsCopy.push(pi[i]);
-					}
+						pi = [neighbors[3*j+0], neighbors[3*j+1], neighbors[3*j+2]];
+						pic = [0,0,0];
+						picc = [0,0,0];
+						pii = [0,0,0];
+
+						for(var i = 0; i < pic.length; ++i)
+						{
+								pic[i] = c[i]-pi[i];
+								picc[i] = cc[i]-pi[i];
+						}
+						
+						for(var i = 0; i < pic.length; ++i)
+						{
+								pii[i] = pi[i] + (norm(d)/norm(pic))*picc[i];
+								neighborsNew.push(pii[i]);
+								neighborsCopy.push(pi[i]);
+						}
 				}
-				
+
 				//Update the new coordinates
-				
+
 				controlPoints[controlPointSelected*3+0] += dx;
 				controlPoints[controlPointSelected*3+1] += dy;
 				controlPoints[controlPointSelected*3+2] += dz;
-								
+
 				for(var i = 0; i < vertices.length/3; ++i)
 				{
-					for(var j = 0; j < neighbors.length; ++j)
-						if( vertices[i*3+0] == neighborsCopy[j*3 + 0] && 
-							vertices[i*3+1] == neighborsCopy[j*3 + 1] && 
-							vertices[i*3+2] == neighborsCopy[j*3 + 2])
-							for(var k = 0; k < 3; ++k)
-								vertices[i*3 + k] = neighborsNew[j*3+k];
-					//Control point							
+					for(var j = 0; j < neighbors.length/3; ++j)
+							if(vertices[i*3+0] == neighborsCopy[j*3 + 0] && 
+									vertices[i*3+1] == neighborsCopy[j*3 + 1] && 
+									vertices[i*3+2] == neighborsCopy[j*3 + 2])
+									for(var k = 0; k < 3; ++k)
+											vertices[i*3 + k] = neighborsNew[j*3+k];
+					//Control point   
 					if( vertices[i*3+0] == c[0] && 
-						vertices[i*3+1] == c[1] && 
-						vertices[i*3+2] == c[2])
-						for(var k = 0; k < 3; ++k)
-							vertices[i*3 + k] = cc[k];
+							vertices[i*3+1] == c[1] && 
+							vertices[i*3+2] == c[2])
+							{
+							//console.log(1);
+							for(var k = 0; k < 3; ++k)
+									vertices[i*3 + k] = cc[k];
+							}
 				}
-				
+
 				vertexBuffer = getVertexBufferWithVertices(vertices);		
 				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);
 			}

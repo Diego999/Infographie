@@ -98,24 +98,27 @@ function handleLoadedObject(data, gl, objVertexTextureCoordBuffer) {
         objVertexTextureCoordBuffer[i].numItems = vertexCount[i];
 	}
 	
-	var result = [
-		{
-			verticies:		vertexPositions[0],
-			vertexCount:	vertexCount[0],
-			textureCoords:	vertexTextureCoords[0],
-		}
-	];
+	var vertice_continue = []; 
+	var slices = [];
 	
-	for(var i=1; i<uniqueTextures.length; i++){
-		result.push(
-			[
-				{
-					verticies:		vertexPositions[i],
-					vertexCount:	vertexCount[i],
-					textureCoords:	vertexTextureCoords[i],
-				}
-			]
-		);
+	var start = 0;
+	var end = 0;
+	for(var i = 0; i < vertexPositions.length; ++i)
+	{
+		for(var j = 0; j < vertexPositions[i].length; j++)
+			vertice_continue.push(vertexPositions[i][j]);
+		
+		slices[i] = new Object();
+		slices[i].start = start;
+		slices[i].end = end + vertexPositions[i].length;
+		
+		start = end + vertexPositions[i].length;
+		end = start;
 	}
-	return result;	
+	
+	var rv = new Object();
+	rv.slices = slices;
+	rv.vertice_continue = vertice_continue
+	
+	return rv;
 }
