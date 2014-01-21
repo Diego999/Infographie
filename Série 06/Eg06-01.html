@@ -119,7 +119,7 @@
 			var dx = 0;
 			var dy = 0;
 			var dz = 0;
-			var deltaXYZ = 0.1;
+			var deltaXYZ = 0.001;
 			
 			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
 			var vertexBuffer = null;
@@ -375,7 +375,7 @@
 			}
 			
 			function drawSceneControl()
-			{
+			{				
 				glContext.useProgram(prgControl);
 				//send the projection and model view matrices to the vertex shader
 			    glContext.uniformMatrix4fv(prgControl.pMatrixUniform, false, pMatrix);
@@ -388,9 +388,10 @@
 				glContext.vertexAttribPointer(prgControl.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
 				
 				point = []
-				point.push( controlPoints[controlPointSelected*controlPoints.length/3+0],
-							controlPoints[controlPointSelected*controlPoints.length/3+1],
-							controlPoints[controlPointSelected*controlPoints.length/3+2]);
+				point.push( controlPoints[controlPointSelected*3+0],
+							controlPoints[controlPointSelected*3+1],
+							controlPoints[controlPointSelected*3+2]);
+							
 				glContext.uniform3fv(glContext.getUniformLocation(prgControl, 'uControlPointSelected'), point);
 				
 				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
