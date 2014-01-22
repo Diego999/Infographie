@@ -221,17 +221,6 @@
 			{				
 				controlPointsIndex = payload.controlPoints;
 				
-				var sel = document.getElementById('controlPoints');
-				var opt = null;
-
-				for(i = 0; i<controlPointsIndex.length; i++) 
-				{
-					opt = document.createElement('option');
-					opt.value = controlPointsIndex[i];
-					opt.innerHTML = controlPointsIndex[i];
-					sel.appendChild(opt);
-				}
-				
 				controlPoints = [];
 				originalControlPoints = [];
 				
@@ -389,7 +378,7 @@
 			
 			function drawSceneControl()
 			{				
-				glContext.useProgram(prgControl);
+				/*glContext.useProgram(prgControl);
 				//send the projection and model view matrices to the vertex shader
 			    glContext.uniformMatrix4fv(prgControl.pMatrixUniform, false, pMatrix);
 			    glContext.uniformMatrix4fv(prgControl.mvMatrixUniform, false, mvMatrix);
@@ -411,7 +400,7 @@
 				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
 								
 				//1.4 Draw as triangles
-				glContext.drawArrays(glContext.POINTS, 0, controlPoints.length/3);	
+				glContext.drawArrays(glContext.POINTS, 0, controlPoints.length/3);	*/
 			}
 			
 			
@@ -721,21 +710,6 @@
 			<li>Zoom out : "-" key</li>
 			<li>Rotate object : w, a, s, d</li>
         </ul>
-		<form><p>
-		<label>Control point : </label><select id="controlPoints" onchange="changeControlPoint()">
-		</select><br /><br />
-		
-		<p>Use only stretching control on one axis at the same time. <br />When stretches in more than one direction are applied, some <strong>inconsistencies</strong> can occur.<br />
-		After a certain length of stretching this elastic <strong>will brake.</strong></p>
-		<label>Dx : </label><span id="ddx">0.0</span>
-		<input type="range" id="dx" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDx()"><br />
-		
-		<label>Dy : </label><span id="ddy">0.0</span>
-		<input type="range" id="dy" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDy()"><br />
-		
-		<label>Dz : </label><span id="ddz">0.0</span>
-		<input type="range" id="dz" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDz()"><br />
-		</p></form>
 		</div>
 	</body>
 	<script id="code-js" type="text/javascript">

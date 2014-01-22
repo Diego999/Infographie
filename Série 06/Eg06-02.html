@@ -1,0 +1,765 @@
+<!doctype html>
+
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+		
+		<link rel="stylesheet" href="css/stylesheet.css">
+
+		<script src="js/commonFunctions.js"></script>	<!-- Example external source -->
+		<script src='js/gl-matrix-min.js'></script>		<!-- Matrix Library -->
+		<script src='js/webglTools.js'></script>		<!-- Basic WebGL initialization tools -->
+		<script src='js/obj.js'></script>		<!-- Basic WebGL initialization tools -->
+		
+		<script id="shader-vs" type="x-shader/x-vertex">
+		
+		////////////////////////////////////////////////
+		////            vertex shader               ////
+		////////////////////////////////////////////////
+		
+		attribute vec3 aVertexPosition;
+		attribute vec2 aTextureCoord;
+		
+		uniform mat4 uMVMatrix; 
+		uniform mat4 uPMatrix; 
+			
+		varying vec2 vTextureCoord;
+		
+		void main(void) 
+		{
+			vec4 vertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+			
+			gl_Position = uPMatrix * vertex;
+			vTextureCoord = aTextureCoord;
+		}
+		</script>
+		
+		
+		<script id="shader-fs" type="x-shader/x-fragment">
+			
+		////////////////////////////////////////////////
+		////          fragment shader               ////
+		////////////////////////////////////////////////
+		
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		
+		uniform sampler2D uSampler;
+		
+		varying vec2 vTextureCoord;
+		
+		void main(void)
+		{
+			gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+		}
+		</script>
+
+		<script id="shader-control-vs" type="x-shader/x-vertex">
+		
+		////////////////////////////////////////////////
+		////            vertex shader               ////
+		////////////////////////////////////////////////
+		
+		attribute vec3 aVertexPosition;
+
+		uniform mat4 uMVMatrix; 
+		uniform mat4 uPMatrix;  
+		uniform vec3 uControlPointSelected;
+		varying vec4 vColor;
+		
+		void main(void) 
+		{
+			gl_PointSize = 5.0;
+			gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			
+			if(all(equal(uControlPointSelected,aVertexPosition)))
+				vColor = vec4(0.0, 1.0, 0.0, 1.0);
+			else
+				vColor = vec4(1.0, 0.0, 0.0, 1.0);
+		}
+		</script>
+		
+		<script id="shader-control-fs" type="x-shader/x-fragment">
+			
+		////////////////////////////////////////////////
+		////          fragment shader               ////
+		////////////////////////////////////////////////
+		
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		
+		varying vec4 vColor;
+		
+		void main(void)
+		{	
+			gl_FragColor = vColor;
+		}
+		</script>
+		
+		<script>
+			
+			////////////////////////////////////////////////
+			////         Global JS variables            ////
+			////////////////////////////////////////////////
+			
+			var prgObject = null;
+			var prgControl = null;
+			var controlPoints = null;
+			var originalControlPoints = null;
+			var controlPointSelected = 0;
+			var controlPointsIndex = null;
+			
+			var graph = [];
+			
+			var rotX = 0.0; //rotation on the X-axis (in degrees) 
+			var rotY = 0.0; //rotation on the Y-axis (in degrees)
+			
+			var dx = 0;
+			var dy = 0;
+			var dz = 0;
+			var deltaXYZ = 0.001;
+			
+			// Buffers to send data to the graphics card (vertices, indices, color per vertex)
+			var vertexBuffer = null;
+			var controlPointsBuffer = null;
+			var indexBuffer = null;
+
+			var indices = []; //JavaScript array to store the indices of the polygon
+			var vertices_slices = [];
+			var vertices = [];
+			var originalVertices = [];
+			
+			var mvMatrix = mat4.create(); // The Model-View matrix
+			var pMatrix = mat4.create(); // The projection matrix
+			
+			// rotation matrix
+			var rotationMatrix = mat4.create();
+			mat4.identity(rotationMatrix);
+			
+			// variables stores informations about translation, rotations and mouse states.
+			var leftMouseDown = false;
+			var rightMouseDown = false;
+			var lastMouseX = null;
+			var lastMouseY = null;
+			var moveXInWorld = 0.0;
+			var moveYInWorld = -2.95;
+			var lastRightMouseX = 0;
+			var lastRightMouseY = 0;
+			
+			var distance = 1.75;
+			
+			
+			////////////////////////////////////////////////
+			////              Model Loader              ////
+			////////////////////////////////////////////////
+			
+			// Executes a http request via ajax, to load a model ressource.
+			function loadModel(name) {
+				loadObject(name);
+				loadTexture(name);
+			}
+			
+			// Variables for the texture management
+			var allTex = [];
+			var uniqueTextures = [];
+			var allTexCount = -1;
+			var allTexLength = [];
+			var objVertexTextureCoordBuffer = [];
+			var objVertexPositionBuffer = [];
+			
+			var texture = [];
+			
+			function equal(a,b)
+			{
+				return (Math.abs(a-b) < 0.000001);
+			}
+			
+			function loadObject(fileName) {
+				var request = new XMLHttpRequest();
+				request.open("GET", fileName+'.obj');
+				request.onreadystatechange = function () {
+					if (request.readyState == 4) {
+						rv = handleLoadedObject(request.responseText, glContext, objVertexTextureCoordBuffer);
+						
+						vertices_slices = rv.slices.slice(0);
+						vertices = rv.vertice_continue.slice(0);
+						originalVertices = rv.vertice_continue.slice(0);
+						
+						loadControlPoints(fileName);
+					}
+					
+				}
+				request.send();
+			}
+			
+			function loadControlPoints(fileName)
+			{
+				var request = new XMLHttpRequest();
+
+				request.open("GET", fileName + ".json");
+								
+				request.onreadystatechange = function() {
+					if (request.readyState == 4) {
+						if(request.status == 404) {
+							console.info(fileName + ' does not exist');
+						}
+						else {
+							handleLoadedControlPoints(JSON.parse(request.responseText));
+							
+							initObjPrg();
+						
+							renderLoop();	
+						}
+					}
+				}
+				request.send();
+			}
+			
+			function handleLoadedControlPoints(payload)
+			{				
+				controlPointsIndex = payload.controlPoints;
+				
+				var sel = document.getElementById('controlPoints');
+				var opt = null;
+
+				for(i = 0; i<controlPointsIndex.length; i++) 
+				{
+					opt = document.createElement('option');
+					opt.value = controlPointsIndex[i];
+					opt.innerHTML = controlPointsIndex[i];
+					sel.appendChild(opt);
+				}
+				
+				controlPoints = [];
+				originalControlPoints = [];
+				
+				for(var i = 0; i < controlPointsIndex.length; ++i)
+					for(var j = 0; j < 3; ++j)
+					{
+						controlPoints.push(vertices[controlPointsIndex[i]*3+j]);
+						originalControlPoints.push(vertices[controlPointsIndex[i]*3+j]);
+					}
+				
+				indices = [];
+				for(var i = 0; i < vertices.length/3; ++i)
+					indices.push(i);
+				
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph.push({key:i, value:new Set()});
+
+				for(var i = 0; i < indices.length-1; i+=3)
+				{
+					graph[indices[i+0]].value.add(indices[i+1]);
+					graph[indices[i+1]].value.add(indices[i+2]);
+					graph[indices[i+2]].value.add(indices[i+0]);
+					
+					graph[indices[i+1]].value.add(indices[i+0]);
+					graph[indices[i+2]].value.add(indices[i+1]);
+					graph[indices[i+0]].value.add(indices[i+2]);
+				}
+					
+				for(var i = 0; i < vertices.length/3; ++i)
+					graph[i].value = [v for (v of graph[i].value)];
+					
+					
+				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);		
+			}
+			
+			function loadTexture(filename)
+			{
+				var request = new XMLHttpRequest();
+				request.open("GET", filename + '.mtl');
+				request.onreadystatechange = function () {
+					if (request.readyState == 4) {
+						var lines = request.responseText.split("\n");
+						
+						for(var i=0; i<lines.length; i++){
+							var vals = lines[i].split(" ");
+							
+							if(vals[0] == "map_Kd"){
+								handleLoadedTexture(vals[1], texture);
+							}
+						}
+					}
+				}
+				request.send();
+			}
+			
+			function handleLoadedTexture(filePath, texture)
+			{
+				var i = texture.length;
+				texture[i] = glContext.createTexture();
+				texture[i].image = new Image();
+				texture[i].image.onload = function(){
+					glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+					glContext.bindTexture(glContext.TEXTURE_2D, texture[i]);
+					glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, texture[i].image);
+					glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+					glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+					
+					glContext.bindTexture(glContext.TEXTURE_2D, null);
+				}
+				texture[i].image.src = filePath;
+			}
+			
+			function initObjPrg(){
+				prgObject.vertexPositionAttribute = glContext.getAttribLocation(prgObject, "aVertexPosition");
+				glContext.enableVertexAttribArray(prgObject.vertexPositionAttribute);
+				
+				prgObject.textureCoordAttribute = glContext.getAttribLocation(prgObject, "aTextureCoord");
+				glContext.enableVertexAttribArray(prgObject.textureCoordAttribute);
+				
+				prgObject.samplerUniform = glContext.getUniformLocation(prgObject, "uSampler");
+
+			}
+			
+			
+			
+			////////////////////////////////////////////////
+			////              WebGL related             ////
+			////////////////////////////////////////////////
+			
+			function drawScene()
+			{
+				//light grey background
+				glContext.clearColor(0.9, 0.9, 1.0, 1.0); // #EEEEFF
+				
+				if (objVertexTextureCoordBuffer[0] == null || objVertexPositionBuffer[0] == null || objVertexTextureCoordBuffer[1] == null || objVertexPositionBuffer[1] == null) {
+					return;
+				}
+				
+				//activate z-buffer
+				glContext.enable(glContext.DEPTH_TEST);
+				
+				//resets color and depth buffer before drawing
+				glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+				
+				drawSceneInit();
+				drawSceneObject();
+				drawSceneControl();
+			}
+			
+			function drawSceneInit()
+			{
+				//defines viewport dimensions based on the webgl canvas size
+				glContext.viewport(0, 0, c_width, c_height);
+									    
+			    mat4.perspective(60, c_width / c_height, 0.1, 100.0, pMatrix);
+
+
+				//model view matrix:
+				mat4.identity(mvMatrix);
+				mat4.translate(mvMatrix, [0, -0.4, distance]); 
+			
+				// apply the a translation on the mvMatrix
+				mat4.translate(mvMatrix, [moveXInWorld, moveYInWorld, -4.0 + distance]);
+				
+				// apply the rotation matrix to the mvMatrix
+				mat4.multiply(mvMatrix, rotationMatrix);
+				
+				mat4.rotate(mvMatrix, degToRad(-10), [0, 1, 0]);
+			}
+			
+			// Draws one image of the scene. If the rendering loop is started, this method is called periodically.
+			function drawSceneObject(){
+				glContext.useProgram(prgObject);
+				//send the projection and model view matrices to the vertex shader
+			    glContext.uniformMatrix4fv(prgObject.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prgObject.mvMatrixUniform, false, mvMatrix);
+				
+				for(var i = 0; i < vertices_slices.length; ++i)
+				{
+					var current_vertices = vertices.slice(vertices_slices[i].start, vertices_slices[i].end);
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, glContext.createBuffer());
+					glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(current_vertices), glContext.STATIC_DRAW);
+					glContext.vertexAttribPointer(prgObject.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+					
+					glContext.bindBuffer(glContext.ARRAY_BUFFER, objVertexTextureCoordBuffer[i]);
+					glContext.vertexAttribPointer(prgObject.textureCoordAttribute, objVertexTextureCoordBuffer[i].itemSize, glContext.FLOAT, false, 0, 0);
+					glContext.activeTexture(glContext.TEXTURE0);
+					glContext.bindTexture(glContext.TEXTURE_2D, texture[i]);
+					
+					glContext.uniform1i(prgObject.samplerUniform, 0);
+					
+					glContext.drawArrays(glContext.TRIANGLES, 0, current_vertices.length/3);
+				}
+			}
+			
+			function drawSceneControl()
+			{				
+				glContext.useProgram(prgControl);
+				//send the projection and model view matrices to the vertex shader
+			    glContext.uniformMatrix4fv(prgControl.pMatrixUniform, false, pMatrix);
+			    glContext.uniformMatrix4fv(prgControl.mvMatrixUniform, false, mvMatrix);
+				
+				//1. Sending vertices(1.1), normals(1.2), and indices(1.3) to the Vertex Shader;
+				//   then ask Vertex Shader to draw triangles between vertices(1.4)
+				//1.1 Send the array of VERTEX specifying that they are each composed of 3 parameters 
+				glContext.bindBuffer(glContext.ARRAY_BUFFER, controlPointsBuffer);
+				glContext.vertexAttribPointer(prgControl.vertexPositionAttribute, 3, glContext.FLOAT, false, 0, 0);
+				
+				point = []
+				point.push( controlPoints[controlPointSelected*3+0],
+							controlPoints[controlPointSelected*3+1],
+							controlPoints[controlPointSelected*3+2]);
+							
+				glContext.uniform3fv(glContext.getUniformLocation(prgControl, 'uControlPointSelected'), point);
+				
+				//1.3 Send the array of INDEX (1 param. for each => no need of 'vertexAttribPointer')
+				glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, indexBuffer);
+								
+				//1.4 Draw as triangles
+				glContext.drawArrays(glContext.POINTS, 0, controlPoints.length/3);	
+			}
+			
+			
+			// Initializes webgl, shaders, buffers and starts rendering loop
+			function initWebGL(){
+				glContext = getGLContext('webgl-canvas');
+				
+				
+				//Initializes the program (shaders).
+				prgObject = initProgram(initObjectShaderParameters, "shader-fs", "shader-vs");
+				prgControl = initProgram(initControlShaderParameters, "shader-control-fs", "shader-control-vs");
+				
+				//Loads a model from file and initializes the buffers that we are going to use to draw polygons 
+				//(vertex buffer, color and index buffer)
+				loadModel("person");
+			}
+			
+			// gets the sahders uniform and attribute locations
+			function initObjectShaderParameters(prg){
+				
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+			    
+				// Uniform:
+			    prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			
+			function initControlShaderParameters(prg){
+				prg.vertexPositionAttribute = glContext.getAttribLocation(prg, "aVertexPosition");
+			    glContext.enableVertexAttribArray(prg.vertexPositionAttribute);
+				
+				prg.pMatrixUniform             = glContext.getUniformLocation(prg, 'uPMatrix');
+			    prg.mvMatrixUniform            = glContext.getUniformLocation(prg, 'uMVMatrix');
+			}
+			
+			////////////////////////////////////////////////
+			////         Utility functions              ////
+			////////////////////////////////////////////////
+			
+			//convert degrees to radians
+			function degToRad(degrees){
+				return( degrees * Math.PI / 180.0 );
+			}
+			
+			function rotateObject(deltaX, deltaY)
+			{
+				var newRotationMatrix = mat4.create();
+				mat4.identity(newRotationMatrix);
+				mat4.rotate(newRotationMatrix, degToRad(deltaX / 5), [0, 1, 0]);
+				mat4.rotate(newRotationMatrix, degToRad(deltaY / 5), [1, 0, 0]);
+	            
+				mat4.multiply(newRotationMatrix, rotationMatrix, rotationMatrix);
+				lastMouseX = lastMouseX + deltaX;
+				lastMouseY = lastMouseY + deltaY;
+			}
+			
+			function checkKey(ev){
+				var delta = 20;
+				switch(ev.keyCode){
+					case 65: // 'a' 
+						rotateObject(-delta, 0);
+						break;
+					case 68: // 'd' 
+						rotateObject(+delta, 0);
+						break;
+					case 87: // 'w'
+						rotateObject(0, -delta);
+						break; 
+					case 83: // 's'
+						rotateObject(0, +delta);
+						break;
+					case 189: // '-' key on mac keyboard
+					case 173: // '-' key (from keyboard)
+					case 109: // '-' key (from number pad)
+						// catch '-' key for the zooom functionaliy
+						distance -= 0.1;
+						break;
+					case 107: // catch '+' key for the zooom functionaliy
+					case 49:
+						distance += 0.1;
+						break;
+					default:
+					  console.log("Pressed/Non-treated key :" + ev.keyCode); //--- DEBUG LINE ---
+					break;
+				}
+				applyDeformation(dx,dy,dz);
+			}
+			
+			function norm(v){
+				return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+			}
+			
+			function computeNeighboorhood(indice, set, n) {
+				console.log("computeNeighbourhood i" + n);
+				if(n != 0) {
+					nexts = graph[indice].value;
+					console.log("entered " + nexts.length);
+					
+					for(var i = 0; i < nexts.length; ++i)
+						if(!set.has(nexts[i]))
+						{
+							set.add(nexts[i]);
+							computeNeighboorhood(nexts[i], set, n-1);
+						}
+				}
+			}
+			
+			function getNeighbors(){
+				index_vertice = controlPointsIndex[controlPointSelected];
+				neighboorhoud = 1;
+				
+				set = new Set();
+				computeNeighboorhood(index_vertice, set, neighboorhoud);
+					
+				out = [v for (v of set)];
+				//console.log(out);
+				return out;
+			}
+			
+			function applyDeformation(dx, dy, dz) {
+				console.log(dx + ", " + dy + ", " + dz);
+				vertices = originalVertices.slice(0);
+				controlPoints = originalControlPoints.slice(0);
+
+				c = [controlPoints[controlPointSelected*3+0], controlPoints[controlPointSelected*3+1], controlPoints[controlPointSelected*3+2]];
+				
+				d = [dx, dy, dz];
+				cc = [0,0,0];
+				for(var i = 0; i < cc.length;++i)
+					cc[i] = c[i] + d[i];
+					
+				temp = getNeighbors();
+				neighbors = [];
+				
+				for(var i = 0; i < temp.length; ++i)
+					for(var j = 0; j < 3; ++j)
+						neighbors.push(vertices[temp[i]*3+j]);
+
+				neighborsNew = [];
+				neighborsCopy = [];
+
+				//Compute the deformation for the neighborhood
+				for(var j = 0; j < neighbors.length/3; ++j)
+				{
+						pi = [neighbors[3*j+0], neighbors[3*j+1], neighbors[3*j+2]];
+						pic = [0,0,0];
+						picc = [0,0,0];
+						pii = [0,0,0];
+
+						for(var i = 0; i < pic.length; ++i)
+						{
+								pic[i] = c[i]-pi[i];
+								picc[i] = cc[i]-pi[i];
+						}
+						
+						for(var i = 0; i < pic.length; ++i)
+						{
+								pii[i] = pi[i] + (norm(d)/norm(pic))*picc[i];
+								neighborsNew.push(pii[i]);
+								neighborsCopy.push(pi[i]);
+						}
+				}
+
+				//Update the new coordinates
+
+				controlPoints[controlPointSelected*3+0] += dx;
+				controlPoints[controlPointSelected*3+1] += dy;
+				controlPoints[controlPointSelected*3+2] += dz;
+
+				for(var i = 0; i < vertices.length/3; ++i)
+				{
+					for(var j = 0; j < neighbors.length/3; ++j)
+							if(vertices[i*3+0] == neighborsCopy[j*3 + 0] && 
+									vertices[i*3+1] == neighborsCopy[j*3 + 1] && 
+									vertices[i*3+2] == neighborsCopy[j*3 + 2])
+									for(var k = 0; k < 3; ++k)
+											vertices[i*3 + k] = neighborsNew[j*3+k];
+					//Control point   
+					if( vertices[i*3+0] == c[0] && 
+							vertices[i*3+1] == c[1] && 
+							vertices[i*3+2] == c[2])
+							{
+							//console.log(1);
+							for(var k = 0; k < 3; ++k)
+									vertices[i*3 + k] = cc[k];
+							}
+				}
+
+				vertexBuffer = getVertexBufferWithVertices(vertices);		
+				controlPointsBuffer = getVertexBufferWithVertices(controlPoints);
+			}
+			
+			function handleMouseDown(event)
+			{
+				if(event.which == 3 || event.button == 2)
+				{
+					lastRightMouseX = event.clientX;
+					lastRightMouseY = event.clientY;
+					rightMouseDown = true;
+				}
+				else if(event.which == 1 || event.button == 0)
+				{
+					lastMouseX = event.clientX;
+					lastMouseY = event.clientY
+					leftMouseDown = true;
+				}
+			}
+			
+			function handleMouseUp(event)
+			{
+				if(event.which == 3 || event.button == 2)
+				{
+					rightMouseDown = false;
+				}
+				else if(event.which == 1 || event.button == 0)
+				{
+					leftMouseDown = false;
+				}
+			}
+			
+			function handleMouseMove(event)
+			{
+				var newX = event.clientX;
+				var newY = event.clientY;
+	
+				if(rightMouseDown)
+				{
+					var deltaX = newX - lastRightMouseX;
+					var deltaY = newY - lastRightMouseY;
+					
+					moveXInWorld += deltaX/100;
+					moveYInWorld -= deltaY/100;
+					
+					lastRightMouseX = newX;
+					lastRightMouseY = newY;
+					
+				}
+				
+				if(leftMouseDown)
+				{
+					var deltaX = newX - lastMouseX;
+					var deltaY = newY - lastMouseY;
+					
+					rotateObject(deltaX, deltaY);
+				}
+			}
+			
+			function MouseScroll (event) {
+				var rolled = 0;
+				if ('wheelDelta' in event) {
+					rolled = event.wheelDelta;
+				}
+				else {  // Firefox
+					rolled = event.detail;
+				}
+				distance += -rolled/80;
+			}
+	
+		function changeControlPoint()
+		{
+			controlPointSelected = document.getElementById("controlPoints").selectedIndex;
+			document.getElementById("dx").value = document.getElementById("dy").value = document.getElementById("dz").value = 0.00;
+			changeDx();changeDy();changeDz();
+			dx=dy=dz=0;
+		}
+		
+		function changeDx()
+		{
+			dx = document.getElementById("dx").value;
+			document.getElementById("ddx").innerHTML = parseFloat(dx).toFixed(5);
+			applyDeformation(parseFloat(dx),dy,dz);
+		}
+		
+		function changeDy()
+		{
+			dy = document.getElementById("dy").value;
+			document.getElementById("ddy").innerHTML = parseFloat(dy).toFixed(5);
+			applyDeformation(dx,parseFloat(dy),dz);
+		}
+		
+		function changeDz()
+		{
+			dz = document.getElementById("dz").value;
+			document.getElementById("ddz").innerHTML = parseFloat(dz).toFixed(5);
+			applyDeformation(dx,dy,parseFloat(dz));
+		}
+		</script>
+	</head>
+
+	<!-- HTML body -->
+	<body onload="initWebGL()">
+		<script>displayTitle("Eg06-01 : Textured face model", 0,1,1,1);</script>
+		<!-- WebGL canvas -->	
+		<canvas id="webgl-canvas" width="500" height="500" style="float:left;">
+			HTML5 is not supported
+		</canvas>
+		<div style="float:left;margin-left:25px">
+		<p>This is a linear model elastic. You can choose the point with the combobox and change the value of the stretching.<br />
+		When you change the axis of the stretching with the slider, you have to click twice to change the value for the first time.</p>
+		<p>Possible interactions:</p>
+        <ul>
+			<li>Rotation : Mouse movement (left button down)</li>
+			<li>Movin camera : Mouse movement (right button down)</li>
+			<li>Zoom : Mouse wheel</li>
+			<li>Zoom in : "+" key</li>
+			<li>Zoom out : "-" key</li>
+			<li>Rotate object : w, a, s, d</li>
+        </ul>
+		<form><p>
+		<label>Control point : </label><select id="controlPoints" onchange="changeControlPoint()">
+		</select><br /><br />
+		
+		<p>Use only stretching control on one axis at the same time. <br />When stretches in more than one direction are applied, some <strong>inconsistencies</strong> can occur.<br />
+		After a certain length of stretching this elastic <strong>will brake.</strong></p>
+		<label>Dx : </label><span id="ddx">0.0</span>
+		<input type="range" id="dx" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDx()"><br />
+		
+		<label>Dy : </label><span id="ddy">0.0</span>
+		<input type="range" id="dy" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDy()"><br />
+		
+		<label>Dz : </label><span id="ddz">0.0</span>
+		<input type="range" id="dz" min="-0.02" max="0.02" value="0.0" step="0.001" onchange="changeDz()"><br />
+		</p></form>
+		</div>
+	</body>
+	<script id="code-js" type="text/javascript">
+	
+		////////////////////////////////////////////////
+		////      JS action initialisation          ////
+		////////////////////////////////////////////////
+		var canvas = document.getElementById ("webgl-canvas");
+		
+		window.onkeydown = checkKey;
+		canvas.onmousedown = handleMouseDown;
+		document.onmouseup = handleMouseUp;
+		document.onmousemove = handleMouseMove;	
+
+		if (canvas.addEventListener) {    // all browsers except IE before version 9
+			// Internet Explorer, Opera, Google Chrome and Safari
+			canvas.addEventListener ("mousewheel", MouseScroll, false);
+			// Firefox
+			canvas.addEventListener ("DOMMouseScroll", MouseScroll, false);
+		}
+		else {
+			if (canvas.attachEvent) { // IE before version 9
+				canvas.attachEvent ("onmousewheel", MouseScroll);
+			}
+		}
+	</script>
+</html>
