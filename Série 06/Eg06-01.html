@@ -531,7 +531,7 @@
 			
 			function getNeighbors(){
 				index_vertice = controlPointsIndex[controlPointSelected];
-				neighboorhoud = 1;
+				neighboorhoud = 2;
 				
 				set = new Set();
 				computeNeighboorhood(index_vertice, set, neighboorhoud);
@@ -677,7 +677,7 @@
 				else {  // Firefox
 					rolled = event.detail;
 				}
-				distance += -rolled/20;
+				distance += -rolled/80;
 			}
 	
 		function changeControlPoint()
