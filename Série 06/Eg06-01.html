@@ -216,6 +216,18 @@
 			function handleLoadedControlPoints(payload)
 			{				
 				controlPointsIndex = payload.controlPoints;
+				
+				var sel = document.getElementById('controlPoints');
+				var opt = null;
+
+				for(i = 0; i<controlPointsIndex.length; i++) 
+				{
+					opt = document.createElement('option');
+					opt.value = controlPointsIndex[i];
+					opt.innerHTML = controlPointsIndex[i];
+					sel.appendChild(opt);
+				}
+				
 				controlPoints = [];
 				originalControlPoints = [];
 				
@@ -502,6 +514,8 @@
 					case 77://m
 							++controlPointSelected;
 							controlPointSelected %= controlPoints.length/3;
+							document.getElementById("dx").value = document.getElementById("dy").value = document.getElementById("dz").value = 0.00;
+							changeDx();changeDy();changeDz();
 						break;
 					case 75://k
 							if(controlPointSelected == 0)
@@ -683,7 +697,33 @@
 				distance += -rolled/20;
 			}
 	
-						
+		function changeControlPoint()
+		{
+			controlPointSelected = document.getElementById("controlPoints").selectedIndex;
+			document.getElementById("dx").value = document.getElementById("dy").value = document.getElementById("dz").value = 0.00;
+			changeDx();changeDy();changeDz();
+		}
+		
+		function changeDx()
+		{
+			dx = document.getElementById("dx").value;
+			document.getElementById("ddx").innerHTML = parseFloat(dx).toFixed(2);
+			applyDeformation(parseFloat(dx),dy,dz);
+		}
+		
+		function changeDy()
+		{
+			dy = document.getElementById("dy").value;
+			document.getElementById("ddy").innerHTML = parseFloat(dy).toFixed(2);
+			applyDeformation(dx,parseFloat(dy),dz);
+		}
+		
+		function changeDz()
+		{
+			dz = document.getElementById("dz").value;
+			document.getElementById("ddz").innerHTML = parseFloat(dz).toFixed(2);
+			applyDeformation(dx,dy,parseFloat(dz));
+		}
 		</script>
 	</head>
 
@@ -695,7 +735,8 @@
 			HTML5 is not supported
 		</canvas>
 		<div style="float:left;margin-left:25px">
-		<p>WRITE DESCRIPTION HERER</p>
+		<p>This is a linear model elastic. You can choose the point with the combobox and change the value of the stretching.<br />
+		When you change the axis of the stretching with the slider, you have to click twice to change the value for the first time.</p>
 		<p>Possible interactions:</p>
         <ul>
 			<li>Rotation : Mouse movement (left button down)</li>
@@ -712,6 +753,19 @@
 			<li>Move the point below the plan z : b</li>
 			<li>Move the point above the plan z : n</li>
         </ul>
+		<form><p>
+		<label>Control point : </label><select id="controlPoints" onchange="changeControlPoint()">
+		</select><br /><br />
+		
+		<label>Dx : </label><span id="ddx">0.0</span>
+		<input type="range" id="dx" min="-1" max="1" value="0.0" step="0.01" onchange="changeDx()"><br />
+		
+		<label>Dy : </label><span id="ddy">0.0</span>
+		<input type="range" id="dy" min="-1" max="1" value="0.0" step="0.01" onchange="changeDy()"><br />
+		
+		<label>Dz : </label><span id="ddz">0.0</span>
+		<input type="range" id="dz" min="-1" max="1" value="0.0" step="0.01" onchange="changeDz()"><br />
+		</p></form>
 		</div>
 	</body>
 	<script id="code-js" type="text/javascript">
