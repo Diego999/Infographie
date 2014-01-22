@@ -220,7 +220,6 @@
 							initObjPrg();
 						
 							renderLoop();	
-							//drawScene();
 						}
 					}
 				}
@@ -504,36 +503,6 @@
 					case 49:
 						distance += 0.1;
 						break;
-					case 89://y plan x - decrease
-						dx -= deltaXYZ;
-						break;
-					case 88://x plan x - increase
-						dx += deltaXYZ;
-						break;
-					case 67://c plan y - decrease
-						dy -= deltaXYZ;
-						break;	
-					case 86://v plan y - increase
-						dy += deltaXYZ;
-						break;
-					case 66://b plan z - decrease
-						dz -= deltaXYZ;
-						break;
-					case 78://n plan z - increase
-						dz += deltaXYZ;
-						break;
-					case 77://m
-							++controlPointSelected;
-							controlPointSelected %= controlPoints.length/3;
-							document.getElementById("dx").value = document.getElementById("dy").value = document.getElementById("dz").value = 0.00;
-							changeDx();changeDy();changeDz();
-						break;
-					case 75://k
-							if(controlPointSelected == 0)
-								controlPointSelected = controlPoints.length/3-1;
-							else
-								--controlPointSelected;
-						break;
 					default:
 					  console.log("Pressed/Non-treated key :" + ev.keyCode); //--- DEBUG LINE ---
 					break;
@@ -562,7 +531,7 @@
 			
 			function getNeighbors(){
 				index_vertice = controlPointsIndex[controlPointSelected];
-				neighboorhoud = 100;
+				neighboorhoud = 1;
 				
 				set = new Set();
 				computeNeighboorhood(index_vertice, set, neighboorhoud);
@@ -572,7 +541,8 @@
 				return out;
 			}
 			
-			function applyDeformation(dx, dy, dz) {		
+			function applyDeformation(dx, dy, dz) {
+				console.log(dx + ", " + dy + ", " + dz);
 				vertices = originalVertices.slice(0);
 				controlPoints = originalControlPoints.slice(0);
 
@@ -715,6 +685,7 @@
 			controlPointSelected = document.getElementById("controlPoints").selectedIndex;
 			document.getElementById("dx").value = document.getElementById("dy").value = document.getElementById("dz").value = 0.00;
 			changeDx();changeDy();changeDz();
+			dx=dy=dz=0;
 		}
 		
 		function changeDx()
@@ -757,27 +728,20 @@
 			<li>Zoom : Mouse wheel</li>
 			<li>Zoom in : "+" key</li>
 			<li>Zoom out : "-" key</li>
-			<li>Select the next control point : m</li>
-			<li>Select the previous control point : k</li>
-			<li>Move the point below the plan x : y</li>
-			<li>Move the point above the plan x : x</li>
-			<li>Move the point below the plan y : c</li>
-			<li>Move the point above the plan y : v</li>
-			<li>Move the point below the plan z : b</li>
-			<li>Move the point above the plan z : n</li>
+			<li>Rotate object : w, a, s, d</li>
         </ul>
 		<form><p>
 		<label>Control point : </label><select id="controlPoints" onchange="changeControlPoint()">
 		</select><br /><br />
 		
 		<label>Dx : </label><span id="ddx">0.0</span>
-		<input type="range" id="dx" min="-1" max="1" value="0.0" step="0.01" onchange="changeDx()"><br />
+		<input type="range" id="dx" min="-0.10" max="0.10" value="0.0" step="0.01" onchange="changeDx()"><br />
 		
 		<label>Dy : </label><span id="ddy">0.0</span>
-		<input type="range" id="dy" min="-1" max="1" value="0.0" step="0.01" onchange="changeDy()"><br />
+		<input type="range" id="dy" min="-0.10" max="0.10" value="0.0" step="0.01" onchange="changeDy()"><br />
 		
 		<label>Dz : </label><span id="ddz">0.0</span>
-		<input type="range" id="dz" min="-1" max="1" value="0.0" step="0.01" onchange="changeDz()"><br />
+		<input type="range" id="dz" min="-0.10" max="0.10" value="0.0" step="0.01" onchange="changeDz()"><br />
 		</p></form>
 		</div>
 	</body>
@@ -792,7 +756,7 @@
 		canvas.onmousedown = handleMouseDown;
 		document.onmouseup = handleMouseUp;
 		document.onmousemove = handleMouseMove;	
-		
+
 		if (canvas.addEventListener) {    // all browsers except IE before version 9
 			// Internet Explorer, Opera, Google Chrome and Safari
 			canvas.addEventListener ("mousewheel", MouseScroll, false);
